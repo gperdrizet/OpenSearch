@@ -7,6 +7,8 @@ from wikisearch.classes.wikireader import WikiReader
 import wikisearch.functions.parsing_functions as parse_funcs
 import wikisearch.functions.IO_functions as io_funcs
 
+################################################################################
+
 def run(output_destination: str) -> None:
     '''Main function to run XML dump parse'''
 
@@ -21,7 +23,9 @@ def run(output_destination: str) -> None:
     input_queue=manager.Queue(maxsize=2000)
     
     # Open bzip data stream from XML dump file
-    wiki=BZ2File('wikisearch/data/enwiki-20240320-pages-articles-multistream.xml.bz2')
+    wiki=BZ2File(
+        'wikisearch/data/enwiki-20240320-pages-articles-multistream.xml.bz2'
+    )
 
     # Instantiate a WikiReader instance, pass it a lambda function
     # to filter record namespaces and our parser's input queue put 
@@ -29,19 +33,32 @@ def run(output_destination: str) -> None:
     reader=WikiReader(lambda ns: ns == 0, input_queue.put)
 
     # Start the status monitor printout
-    status=Thread(target=io_funcs.display_status, args=(input_queue, output_queue, reader))
+    status=Thread(
+        target=io_funcs.display_status, 
+        args=(input_queue, output_queue, reader)
+    )
+
     status.start() 
 
     # Start 15 parser jobs
     for _ in range(15):
-        process=Process(target=parse_funcs.parse_article, args=(input_queue, output_queue, shutdown))
+
+        process=Process(
+            target=parse_funcs.parse_article, 
+            args=(input_queue, output_queue, shutdown)
+        )
+
         process.start()
 
     # Target the correct output function
 
     # Save to file
     if output_destination == 'file':
-        write_thread=Thread(target=io_funcs.write_file, args=(output_queue, shutdown))
+
+        write_thread=Thread(
+            target=io_funcs.write_file, 
+            args=(output_queue, shutdown)
+        )
 
     # Insert to OpenSearch
     elif output_destination == 'opensearch':
