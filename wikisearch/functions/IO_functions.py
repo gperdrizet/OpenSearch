@@ -1,11 +1,70 @@
 import time
 import multiprocessing
+from opensearchpy import OpenSearch
+
+def index_articles(
+    output_queue: multiprocessing.Queue,
+    shutdown: bool
+) -> None:
+
+    host = 'localhost'
+    port = 9200
+
+    # Create the client with SSL/TLS and hostname verification disabled.
+    client = OpenSearch(
+        hosts = [{'host': host, 'port': port}],
+        http_compress = True, # enables gzip compression for request bodies
+        use_ssl = False,
+        verify_certs = False,
+        ssl_assert_hostname = False,
+        ssl_show_warn = False
+    )
+
+    # Create index
+    index_name = 'enwiki'
+    index_body = {
+        'settings': {
+            'index': {
+                'number_of_shards': 2 # Generic advice is 10-50 GB of data per shard
+            }
+        }
+    }
+
+    response = client.indices.create(index_name, body=index_body)
+
+    # Counter var for document id
+    id=0
+
+    # Loop on queue
+    while not (shutdown and output_queue.empty()):
+
+        # Get article from queue
+        output=output_queue.get()
+
+        # Extract filename and text
+        filename=output[0]
+        text=output[1]
+
+        document = {
+            'title': filename,
+            'text': text
+        }
+
+        response = client.index(
+            index = 'enwiki',
+            body = document,
+            id = id,
+            refresh = True
+        )
+
+        id+=1
 
 def write_file(
     output_queue: multiprocessing.Queue,
     shutdown: bool
 ) -> None:
 
+    # Loop on queue
     while not (shutdown and output_queue.empty()):
 
         # Get article from queue
