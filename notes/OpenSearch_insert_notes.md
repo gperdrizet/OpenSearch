@@ -41,7 +41,7 @@ Don't like option one at all - let's save that one for a last resort. A possibly
 
 ## Bulk insert
 
-OK, seems like it's working. Not sure if will actualy be able to keep up yet. Followed the [tutorial](https://opensearch.org/docs/latest/clients/python-low-level/) in the opensearch-py docs. Again issues with the documentation.
+OK, seems like it's working. Not sure if will actually be able to keep up yet. Followed the [tutorial](https://opensearch.org/docs/latest/clients/python-low-level/) in the opensearch-py docs. Again issues with the documentation.
 
 The documentation says:
 
@@ -69,3 +69,5 @@ otal': 2, 'successful': 2, 'failed': 0}, '_seq_no': 147, '_primary_term': 1, 'st
 tus': 201}}, {'index': {'_index': 'enwiki', '_id': '358', '_version': 1, 'result': 'created', '_shards': {'total': 2, 'successful': 2, 
 'failed': 0}, '_seq_no': 149, '_primary_term': 1, 'status': 201}}....
 ```
+
+And now... It's keeping up! Let's finally do a complete run and time it on the wall clock so we can see what we are working with. I don't even know how big the dataset is when uncompressed or how many articles we are going to end up with. Probably in the millions. Let's see.
