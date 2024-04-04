@@ -40,7 +40,7 @@ def run(output_destination: str):
 
     # Save to file
     if output_destination == 'file':
-        write_thread=Thread(target=helper_funcs.write_out, args=(output_queue, shutdown))
+        write_thread=Thread(target=helper_funcs.write_file, args=(output_queue, shutdown))
 
     # Insert to OpenSearch
     elif output_destination == 'opensearch':

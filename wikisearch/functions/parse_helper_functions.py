@@ -53,7 +53,7 @@ def display_status(input_queue, output_queue, reader):
         print(f'Reader count: {reader.status_count}')
         time.sleep(1)
 
-def write_out(output_queue, shutdown):
+def write_file(output_queue, shutdown):
 
     while not (shutdown and output_queue.empty()):
 
