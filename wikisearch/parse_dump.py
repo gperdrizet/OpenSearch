@@ -64,7 +64,7 @@ def run(output_destination: str) -> None:
     elif output_destination == 'opensearch':
 
         write_thread=Thread(
-            target=io_funcs.index_articles, 
+            target=io_funcs.bulk_index_articles, 
             args=(output_queue, shutdown)
         )
 

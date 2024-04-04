@@ -27,4 +27,45 @@ Search query: Acid
 
 Only issue I see here is it pulls the whole article. But, I guess that's not unexpected... No built in AI summarizer here - if we want that, we have to do it!
 
+## Full insert run
+
 Let's see if we can delete the enwiki index we just created from the dashboard and the do a full run, adding all of wikipedia to it.
+
+Ok, slight issue - the output queue pretty quickly overflows. This means that we can't keep up with inserting all of the articles we are parsing. Couple of options here:
+
+1. Use less parse workers to slow the flow of data down.
+2. Use workers for output and see if that helps keep up.
+3. Use bulk insert to our single output worker is better able to keep up.
+
+Don't like option one at all - let's save that one for a last resort. A possibly sticky issue with option two is the document id. If we have multiple workers indexing documents from multiple threads we will need a way to avoid ID collisions. I think option 3 is probably the way to go - it's the officially supported strategy for indexing many documents efficiently.
+
+## Bulk insert
+
+OK, seems like it's working. Not sure if will actualy be able to keep up yet. Followed the [tutorial](https://opensearch.org/docs/latest/clients/python-low-level/) in the opensearch-py docs. Again issues with the documentation.
+
+The documentation says:
+
+"Note that the operations must be separated by a \n and the entire string must be a single line:"
+
+```text
+movies = '{ "index" : { "_index" : "my-dsl-index", "_id" : "2" } } \n { "title" : "Interstellar", "director" : "Christopher Nolan", "year" : "2014"} \n { "create" : { "_index" : "my-dsl-index", "_id" : "3" } } \n { "title" : "Star Trek Beyond", "director" : "Justin Lin", "year" : "2015"} \n { "update" : {"_id" : "3", "_index" : "my-dsl-index" } } \n { "doc" : {"year" : "2016"} }'
+
+client.bulk(movies)
+```
+
+This is not true - the payload must be a list of dicts rather than newline delimited string and it seems to work fine. Here is the output we see when printing the response from the client.bulk call:
+
+```text
+{'took': 89, 'errors': False, 'items': [{'index': {'_index': 'enwiki', '_id': '351', '_version': 1, 'result': 'created', '_shards': {'t
+otal': 2, 'successful': 2, 'failed': 0}, '_seq_no': 145, '_primary_term': 1, 'status': 201}}, {'index': {'_index': 'enwiki', '_id': '35
+2', '_version': 1, 'result': 'created', '_shards': {'total': 2, 'successful': 2, 'failed': 0}, '_seq_no': 205, '_primary_term': 1, 'sta
+tus': 201}}, {'index': {'_index': 'enwiki', '_id': '353', '_version': 1, 'result': 'created', '_shards': {'total': 2, 'successful': 2, 
+'failed': 0}, '_seq_no': 206, '_primary_term': 1, 'status': 201}}, {'index': {'_index': 'enwiki', '_id': '354', '_version': 1, 'result'
+: 'created', '_shards': {'total': 2, 'successful': 2, 'failed': 0}, '_seq_no': 207, '_primary_term': 1, 'status': 201}}, {'index': {'_i
+ndex': 'enwiki', '_id': '355', '_version': 1, 'result': 'created', '_shards': {'total': 2, 'successful': 2, 'failed': 0}, '_seq_no': 14
+6, '_primary_term': 1, 'status': 201}}, {'index': {'_index': 'enwiki', '_id': '356', '_version': 1, 'result': 'created', '_shards': {'t
+otal': 2, 'successful': 2, 'failed': 0}, '_seq_no': 147, '_primary_term': 1, 'status': 201}}, {'index': {'_index': 'enwiki', '_id': '35
+7', '_version': 1, 'result': 'created', '_shards': {'total': 2, 'successful': 2, 'failed': 0}, '_seq_no': 148, '_primary_term': 1, 'sta
+tus': 201}}, {'index': {'_index': 'enwiki', '_id': '358', '_version': 1, 'result': 'created', '_shards': {'total': 2, 'successful': 2, 
+'failed': 0}, '_seq_no': 149, '_primary_term': 1, 'status': 201}}....
+```
