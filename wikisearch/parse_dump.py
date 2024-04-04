@@ -4,7 +4,7 @@ from threading import Thread
 from xml import sax
 
 from wikisearch.classes.wikireader import WikiReader
-import wikisearch.functions.parse_helper_functions as helper_funcs
+import wikisearch.functions.parsing_functions as helper_funcs
 
 def run(output_destination: str):
     '''Main function to run XML dump parse'''
