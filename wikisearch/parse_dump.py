@@ -62,7 +62,11 @@ def run(output_destination: str) -> None:
 
     # Insert to OpenSearch
     elif output_destination == 'opensearch':
-        pass
+
+        write_thread=Thread(
+            target=io_funcs.index_articles, 
+            args=(output_queue, shutdown)
+        )
 
     # Not sure what to do - warn user
     else:

@@ -42,11 +42,11 @@ def index_articles(
         output=output_queue.get()
 
         # Extract filename and text
-        filename=output[0]
+        page_title=output[0]
         text=output[1]
 
         document = {
-            'title': filename,
+            'title': page_title,
             'text': text
         }
 
@@ -70,9 +70,13 @@ def write_file(
         # Get article from queue
         output=output_queue.get()
 
-        # Extract filename and text
-        filename=output[0]
+        # Extract title and text
+        page_title=output[0]
         text=output[1]
+
+        # Format page title for use as a filename
+        filename=page_title.replace(' ', '_')
+        filename=filename.replace('/', '-')
 
         # Save article to a file
         with open(f"wikisearch/data/articles/{filename}", 'w') as text_file:

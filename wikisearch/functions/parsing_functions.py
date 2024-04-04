@@ -38,12 +38,8 @@ def parse_article(
             # Get rid of image thumbnail lines and leading spaces
             source_string=remove_thumbnails(source_string)
 
-            # Format page title for use as a filename
-            filename=page_title.replace(' ', '_')
-            filename=filename.replace('/', '-')
-
             # Put the result into the output queue
-            output_queue.put((filename, source_string))
+            output_queue.put((page_title, source_string))
 
 
 def fix_bad_symbols(source_string: str) -> str:
