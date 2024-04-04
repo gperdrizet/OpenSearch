@@ -76,6 +76,10 @@ def fix_bad_symbols(source_string: str) -> str:
     source_string=source_string.replace(';\n', '\n')
     source_string=source_string.replace(' ,', ',')
     source_string=source_string.replace(',,', ',')
+    source_string=source_string.replace('−', '-')
+    source_string=source_string.replace('۝ ', '')
+    source_string=source_string.replace('۝', '')
+
 
     # Need to do this one last, some of the above
     # replace-with-nothings leave double spaces
@@ -92,6 +96,7 @@ def clean_newlines(source_string: str) -> str:
     source_string=source_string.replace('\n\n\n\n', '\n\n')
     source_string=source_string.replace('\n\n\n', '\n\n')
     source_string=source_string.replace('\n\n\n', '\n')
+    source_string=source_string.replace('\n\n\n', '\n\n')
 
     return source_string
 
@@ -112,14 +117,17 @@ def remove_thumbnails(source_string: str) -> str:
         if 'thumb|' in line:
             pass
 
-        if 'scope="' in line:
+        elif 'scope="' in line:
             pass
 
-        if 'rowspan="' in line:
+        elif 'rowspan="' in line:
             pass
 
-        if 'style="' in line:
+        elif 'style="' in line:
             pass
+        
+        # If we don't find any of the above, process the line
+        else:
             
             # Check for lines that are not blank but start with space
             # or other garbage
