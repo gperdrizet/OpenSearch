@@ -24,7 +24,7 @@ def parse_article(
 
         # Before we do anything else, check to see if this is a redirect
         # page. If so, we can just skip it.
-        if 'REDIRECT' not in source_string.split('\n')[0] and 'Redirect' not in source_string.split('\n')[0]:
+        if 'REDIRECT' not in source_string.split('\n')[0].upper():
 
             # Remove extra sections from the end of the document
             source_string=remove_extra_sections(source_string)
