@@ -1,7 +1,7 @@
 import time
 import mwparserfromhell
 
-def process_article(aq, shutdown):
+def process_article(aq, fq, shutdown):
     while not (shutdown and aq.empty()):
     
         # Get the page title and the content source from the article queue
@@ -46,6 +46,7 @@ def process_article(aq, shutdown):
             source_string = source_string.replace('(,', '(')
             source_string = source_string.replace(',)', ')')
             source_string = source_string.replace(',),', ',')
+            source_string = source_string.replace(' \n', '\n')
             source_string = source_string.replace('\n\n\n\n\n\n', '\n\n')
             source_string = source_string.replace('\n\n\n\n\n', '\n\n')
             source_string = source_string.replace('\n\n\n\n', '\n\n')
@@ -73,14 +74,32 @@ def process_article(aq, shutdown):
             filename = page_title.replace(' ', '_')
             filename = filename.replace('/', '-')
 
-            # Save article to a file
-            with open(f"wikisearch/data/articles/{filename}", 'w') as text_file:
-                text_file.write(source_string)
+            # # Save article to a file
+            # with open(f"wikisearch/data/articles/{filename}", 'w') as text_file:
+            #     text_file.write(source_string)
+
+            # Put the result into the file queue for saving
+            fq.put((filename, source_string))
 
 
 def display(aq, fq, reader):
     '''Prints queue sizes every second'''
 
     while True:
-        print(f'Article queue size: {aq.qsize()}, reader status count: {reader.status_count}')
+        print(f'Article queue size: {aq.qsize()}, file queue size: {fq.qsize()}, reader count: {reader.status_count}')
         time.sleep(1)
+
+def write_out(fq, shutdown):
+
+    while not (shutdown and fq.empty()):
+
+        # Get article from queue
+        output = fq.get()
+
+        # Extract filename and text
+        filename = output[0]
+        text = output[1]
+
+        # Save article to a file
+        with open(f"wikisearch/data/articles/{filename}", 'w') as text_file:
+            text_file.write(text)

@@ -30,11 +30,14 @@ def run():
     status = Thread(target=helper_funcs.display, args=(aq, fq, reader))
     status.start() 
 
-    processes = []
+    #processes = []
 
     for _ in range(15):
-        process = Process(target=helper_funcs.process_article, args=(aq, shutdown))
+        process = Process(target=helper_funcs.process_article, args=(aq, fq, shutdown))
         process.start()
+
+    write_thread = Thread(target=helper_funcs.write_out, args=(fq, shutdown))
+    write_thread.start()
 
     sax.parse(wiki, reader)
     shutdown = True
