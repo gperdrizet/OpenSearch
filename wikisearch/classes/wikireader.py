@@ -19,6 +19,7 @@ class WikiReader(ContentHandler):
 
 
     def startElement(self, tag_name, attributes):
+
         if tag_name == "ns":
             self.read_namespace = None
             
@@ -30,7 +31,7 @@ class WikiReader(ContentHandler):
             self.read_title = ""
             
         elif tag_name == "text":
-            self.text_text = ""
+            self.read_text = ""
             
         else:
             return
@@ -39,24 +40,33 @@ class WikiReader(ContentHandler):
 
 
     def endElement(self, tag_name):
+
+        if len(self.read_stack) == 0:
+            return
+        
         if tag_name == self.read_stack[-1]:
             del self.read_stack[-1]
 
-        if self.filter(self.read_namespace):
-            if tag_name == "page" and self.read_text is not None:
-                self.status_count += 1
-                self.callback((self.read_title, self.read_text))
+        if tag_name == "page":
+
+            if self.read_text is not None:
+
+                if self.read_namespace == 0:
+
+                    self.status_count += 1
+                    self.callback((self.read_title, self.read_text))
                 
 
     def characters(self, content):
+
         if len(self.read_stack) == 0:
             return
 
-        if self.stack[-1] == "text":
-            self.text += content
+        if self.read_stack[-1] == "text":
+            self.read_text += content
 
-        if self.stack[-1] == "title":
-            self.title += content
+        if self.read_stack[-1] == "title":
+            self.read_title += content
 
-        if self.stack[-1] == "ns":
-            self.ns = int(content)
+        if self.read_stack[-1] == "ns":
+            self.read_namespace = int(content)
