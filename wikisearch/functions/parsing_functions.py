@@ -8,9 +8,6 @@ def parse_article(
 ) -> None:
     
     while not (shutdown and input_queue.empty()):
-
-        print(f'Input queue is type: {type(input_queue)}')
-        print(f'Output queue is type: {type(output_queue)}')
     
         # Get the page title and the content source from the article queue
         page_title, source=input_queue.get()
