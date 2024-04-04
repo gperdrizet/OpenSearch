@@ -22,7 +22,7 @@ if __name__ == '__main__':
         '--output',
         required=False,
         choices=['file', 'opensearch'],
-        default=['file'],
+        default='file',
         help='Where to output parsed articles'
     )
 
