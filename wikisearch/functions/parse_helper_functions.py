@@ -87,11 +87,22 @@ def fix_bad_symbols(source_string):
     source_string=source_string.replace('皖', '')
     source_string=source_string.replace('()', '')
     source_string=source_string.replace('(;)', '')
-    source_string=source_string.replace('  ', ' ')
     source_string=source_string.replace(' ; ', '; ')
     source_string=source_string.replace('(,', '(')
     source_string=source_string.replace(',)', ')')
     source_string=source_string.replace(',),', ',')
+    source_string=source_string.replace(',“', ', "')
+    source_string=source_string.replace('( ;)', '')
+    source_string=source_string.replace('(;', '(')
+    source_string=source_string.replace(' .', '.')
+    source_string=source_string.replace(';;', ';')
+    source_string=source_string.replace(';\n', '\n')
+    source_string=source_string.replace(' ,', ',')
+    source_string=source_string.replace(',,', ',')
+
+    # Need to do this one last, some of the above
+    # replace-with-nothings leave double spaces
+    source_string=source_string.replace('  ', ' ')
 
     return source_string
 
@@ -103,6 +114,7 @@ def clean_newlines(source_string):
     source_string=source_string.replace('\n\n\n\n\n', '\n\n')
     source_string=source_string.replace('\n\n\n\n', '\n\n')
     source_string=source_string.replace('\n\n\n', '\n\n')
+    source_string=source_string.replace('\n\n\n', '\n')
 
     return source_string
 
@@ -119,15 +131,40 @@ def remove_thumbnails(source_string):
     # Loop on the line array
     for line in source_array:
 
-        # Only take lines that are not image thumbnail descriptors
-        if 'thumb|' not in line:
+        # Only take lines that don't contain leftover HTML stuff
+        if 'thumb|' in line:
+            pass
+
+        if 'scope="' in line:
+            pass
+
+        if 'rowspan="' in line:
+            pass
+
+        if 'style="' in line:
+            pass
             
             # Check for lines that are not blank but start with space
+            # or other garbage
             if len(line) > 1:
-                if line[0] == ' ':
 
-                    # Remove the leading space
+                if line[0] == ' ':
                     line=line[1:]
+
+                if line[:2] == '| ':
+                    line=line[2:]
+
+                if line[:2] == '! ':
+                    line=line[2:]
+
+                if line[:2] == '! ':
+                    line=line[2:]
+
+                if line[:2] == '|-':
+                    line=line[2:]
+
+                if line[:2] == '|}':
+                    line=line[2:]
 
             # Add the cleaned line to the result
             cleaned_source_array.append(line)
