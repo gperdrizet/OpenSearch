@@ -1,8 +1,17 @@
 import time
+import multiprocessing
 import mwparserfromhell # type: ignore
 
-def parse_article(input_queue, output_queue, shutdown):
+def parse_article(
+    input_queue: multiprocessing.Queue, 
+    output_queue: multiprocessing.Queue, 
+    shutdown: bool
+) -> None:
+    
     while not (shutdown and input_queue.empty()):
+
+        print(f'Input queue is type: {type(input_queue)}')
+        print(f'Output queue is type: {type(output_queue)}')
     
         # Get the page title and the content source from the article queue
         page_title, source=input_queue.get()
@@ -69,7 +78,7 @@ def write_file(output_queue, shutdown):
             text_file.write(text)
 
 
-def fix_bad_symbols(source_string):
+def fix_bad_symbols(source_string: str) -> str:
     '''Fixes some weird punctuation and symbols left over after
     code is stripped by mwparserfromhell'''
 
@@ -106,7 +115,7 @@ def fix_bad_symbols(source_string):
 
     return source_string
 
-def clean_newlines(source_string):
+def clean_newlines(source_string: str) -> str:
     '''Fixes up some issues with multiple newlines'''
             
     source_string=source_string.replace(' \n', '\n')
@@ -118,7 +127,7 @@ def clean_newlines(source_string):
 
     return source_string
 
-def remove_thumbnails(source_string):
+def remove_thumbnails(source_string: str) -> str:
     '''Removes thumbnail descriptor lines and cleans up any
     lines with leading spaces'''
 
@@ -174,7 +183,7 @@ def remove_thumbnails(source_string):
 
     return source_string
 
-def remove_extra_sections(source_string):
+def remove_extra_sections(source_string: str) -> str:
     '''Remove extra sections from the end of the document by splitting 
     on common headings only keeping the stuff before the split point'''
     

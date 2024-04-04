@@ -6,7 +6,7 @@ from xml import sax
 from wikisearch.classes.wikireader import WikiReader
 import wikisearch.functions.parsing_functions as helper_funcs
 
-def run(output_destination: str):
+def run(output_destination: str) -> None:
     '''Main function to run XML dump parse'''
 
     # Flag to track if we are done
