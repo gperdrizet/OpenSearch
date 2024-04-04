@@ -102,4 +102,4 @@ class WikiReader(ContentHandler):
 
         # If it's a namespace tag, update the namespace
         if self.read_stack[-1] == 'ns':
-            self.read_namespace = int(content)
+            self.read_namespace=int(content)
