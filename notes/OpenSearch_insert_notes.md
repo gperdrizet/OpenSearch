@@ -26,3 +26,5 @@ Search query: Acid
 ```
 
 Only issue I see here is it pulls the whole article. But, I guess that's not unexpected... No built in AI summarizer here - if we want that, we have to do it!
+
+Let's see if we can delete the enwiki index we just created from the dashboard and the do a full run, adding all of wikipedia to it.
