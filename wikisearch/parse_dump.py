@@ -6,7 +6,7 @@ from xml import sax
 from wikisearch.classes.wikireader import WikiReader
 import wikisearch.functions.parse_helper_functions as helper_funcs
 
-def run():
+def run(output_destination: str):
     '''Main function to run XML dump parse'''
 
     # Flag to track if we are done
@@ -23,19 +23,37 @@ def run():
     wiki=BZ2File('wikisearch/data/enwiki-20240320-pages-articles-multistream.xml.bz2')
 
     # Instantiate a WikiReader instance, pass it a lambda function
-    # to filter record namespaces and our article queue's put to
-    # be used as a callback
+    # to filter record namespaces and our parser's input queue put 
+    # function to be used as a callback for when we find article text
     reader=WikiReader(lambda ns: ns == 0, input_queue.put)
 
+    # Start the status monitor printout
     status=Thread(target=helper_funcs.display_status, args=(input_queue, output_queue, reader))
     status.start() 
 
+    # Start 15 parser jobs
     for _ in range(15):
         process=Process(target=helper_funcs.parse_article, args=(input_queue, output_queue, shutdown))
         process.start()
 
-    write_thread=Thread(target=helper_funcs.write_out, args=(output_queue, shutdown))
+    # Target the correct output function
+
+    # Save to file
+    if output_destination == 'file':
+        write_thread=Thread(target=helper_funcs.write_out, args=(output_queue, shutdown))
+
+    # Insert to OpenSearch
+    elif output_destination == 'opensearch':
+        pass
+
+    # Not sure what to do - warn user
+    else:
+        print(f'Unrecognized output destination: {output_destination}. Exiting')
+        shutdown=True
+
+    # Start the output writer thread
     write_thread.start()
 
+    # Send the XML data stream to the reader via xml's sax parser
     sax.parse(wiki, reader)
     shutdown=True
