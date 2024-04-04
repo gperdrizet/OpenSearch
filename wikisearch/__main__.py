@@ -10,8 +10,7 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--task',
-        required=True,
+        'task',
         choices=['update_dump', 'parse_dump'],
         help='Task to run'
     )
@@ -20,6 +19,7 @@ if __name__ == '__main__':
         '--output',
         required=False,
         choices=['file', 'opensearch'],
+        default=['file'],
         help='Where to output parsed articles'
     )
 
