@@ -1,4 +1,3 @@
-import time
 import multiprocessing
 import mwparserfromhell # type: ignore
 
@@ -48,34 +47,6 @@ def parse_article(
 
             # Put the result into the output queue
             output_queue.put((filename, source_string))
-
-
-def display_status(input_queue, output_queue, reader):
-    '''Prints queue sizes every second'''
-
-    print('\n\n\n')
-
-    while True:
-        print('\033[F\033[F\033[F', end='')
-        print(f'Input queue size: {input_queue.qsize()}')
-        print(f'Output queue size: {output_queue.qsize()}')
-        print(f'Reader count: {reader.status_count}')
-        time.sleep(1)
-
-def write_file(output_queue, shutdown):
-
-    while not (shutdown and output_queue.empty()):
-
-        # Get article from queue
-        output=output_queue.get()
-
-        # Extract filename and text
-        filename=output[0]
-        text=output[1]
-
-        # Save article to a file
-        with open(f"wikisearch/data/articles/{filename}", 'w') as text_file:
-            text_file.write(text)
 
 
 def fix_bad_symbols(source_string: str) -> str:
