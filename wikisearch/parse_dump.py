@@ -16,8 +16,8 @@ def run():
     manager = Manager()
 
     # Set-up queues
-    fq = manager.Queue(maxsize=2000)
-    aq = manager.Queue(maxsize=2000)
+    output_queue = manager.Queue(maxsize=2000)
+    input_queue = manager.Queue(maxsize=2000)
     
     # Open bzip data stream from XML dump file
     wiki = BZ2File('wikisearch/data/enwiki-20240320-pages-articles-multistream.xml.bz2')
@@ -25,18 +25,16 @@ def run():
     # Instantiate a WikiReader instance, pass it a lambda function
     # to filter record namespaces and our article queue's put to
     # be used as a callback
-    reader = WikiReader(lambda ns: ns == 0, aq.put)
+    reader = WikiReader(lambda ns: ns == 0, input_queue.put)
 
-    status = Thread(target=helper_funcs.display, args=(aq, fq, reader))
+    status = Thread(target=helper_funcs.display_status, args=(input_queue, output_queue, reader))
     status.start() 
 
-    #processes = []
-
     for _ in range(15):
-        process = Process(target=helper_funcs.process_article, args=(aq, fq, shutdown))
+        process = Process(target=helper_funcs.parse_article, args=(input_queue, output_queue, shutdown))
         process.start()
 
-    write_thread = Thread(target=helper_funcs.write_out, args=(fq, shutdown))
+    write_thread = Thread(target=helper_funcs.write_out, args=(output_queue, shutdown))
     write_thread.start()
 
     sax.parse(wiki, reader)

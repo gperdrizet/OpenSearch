@@ -1,17 +1,21 @@
 import time
-import mwparserfromhell
+import mwparserfromhell # type: ignore
 
-def process_article(aq, fq, shutdown):
-    while not (shutdown and aq.empty()):
+def parse_article(input_queue, output_queue, shutdown):
+    while not (shutdown and input_queue.empty()):
     
         # Get the page title and the content source from the article queue
-        page_title, source = aq.get()
+        page_title, source = input_queue.get()
 
         # Convert source string to wikicode
         wikicode = mwparserfromhell.parse(source)
 
         # Strip garbage out of wikicode source
-        source_string = wikicode.strip_code(normalize=True, collapse=True, keep_template_params=False)
+        source_string = wikicode.strip_code(
+            normalize=True, 
+            collapse=True, 
+            keep_template_params=False
+        )
 
         # Before we do anything else, check to see if this is a redirect
         # page. If so, we can just skip it.
@@ -74,27 +78,23 @@ def process_article(aq, fq, shutdown):
             filename = page_title.replace(' ', '_')
             filename = filename.replace('/', '-')
 
-            # # Save article to a file
-            # with open(f"wikisearch/data/articles/{filename}", 'w') as text_file:
-            #     text_file.write(source_string)
-
             # Put the result into the file queue for saving
-            fq.put((filename, source_string))
+            output_queue.put((filename, source_string))
 
 
-def display(aq, fq, reader):
+def display_status(input_queue, output_queue, reader):
     '''Prints queue sizes every second'''
 
     while True:
-        print(f'Article queue size: {aq.qsize()}, file queue size: {fq.qsize()}, reader count: {reader.status_count}')
+        print(f'Article queue size: {input_queue.qsize()}, file queue size: {output_queue.qsize()}, reader count: {reader.status_count}')
         time.sleep(1)
 
-def write_out(fq, shutdown):
+def write_out(output_queue, shutdown):
 
-    while not (shutdown and fq.empty()):
+    while not (shutdown and output_queue.empty()):
 
         # Get article from queue
-        output = fq.get()
+        output = output_queue.get()
 
         # Extract filename and text
         filename = output[0]
