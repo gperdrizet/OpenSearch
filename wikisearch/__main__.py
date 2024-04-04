@@ -1,5 +1,5 @@
-from wikisearch import parse_json
+from wikisearch import parse_dump
 
 if __name__ == '__main__':
 
-    parse_json.run()
+    parse_dump.run()
