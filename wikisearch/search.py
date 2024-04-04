@@ -1,23 +1,43 @@
 from opensearchpy import OpenSearch
 
-host = 'localhost'
-port = 9200
+def run() -> None:
+    '''Simple command line utility to try out searching'''
 
-# Create the client with SSL/TLS and hostname verification disabled.
-client = OpenSearch(
-    hosts = [{'host': host, 'port': port}],
-    http_compress = True, # enables gzip compression for request bodies
-    use_ssl = False,
-    verify_certs = False,
-    ssl_assert_hostname = False,
-    ssl_show_warn = False
-)
+    host='localhost'
+    port=9200
 
-response = client.indices.get('_all')
+    # Create the client with SSL/TLS and hostname verification disabled.
+    client=OpenSearch(
+        hosts=[{'host': host, 'port': port}],
+        http_compress=True, # enables gzip compression for request bodies
+        use_ssl=False,
+        verify_certs=False,
+        ssl_assert_hostname=False,
+        ssl_show_warn=False
+    )
 
-print()
+    # Loop forever
+    while True:
+        
+        # Get query from user
+        q=input("Search query: ") 
 
-for key, val in response.items():
-    print(f'{key}')
+        # Construct OpenSearch query
+        query={
+            'size': 5,
+            'query': {
+                'multi_match': {
+                    'query': q,
+                    'fields': ['title', 'text']
+                }
+            }
+        }
 
-print()
+        # Do the search
+        response=client.search(
+            body=query,
+            index='enwiki'
+        )
+
+        # Print the result
+        print(response)

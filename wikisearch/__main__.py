@@ -1,5 +1,6 @@
 import argparse
 from wikisearch import parse_dump
+from wikisearch import search
 
 if __name__ == '__main__':
 
@@ -13,7 +14,7 @@ if __name__ == '__main__':
     # Add argument for task to run
     parser.add_argument(
         'task',
-        choices=['update_dump', 'parse_dump'],
+        choices=['update_dump', 'parse_dump', 'search'],
         help='Task to run'
     )
 
@@ -35,6 +36,9 @@ if __name__ == '__main__':
 
     elif args.task == 'update_dump':
         pass
+
+    elif args.task == 'search':
+        search.run()
 
     else:
         print('Unrecognized task, exiting.')

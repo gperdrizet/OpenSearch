@@ -7,22 +7,22 @@ def index_articles(
     shutdown: bool
 ) -> None:
 
-    host = 'localhost'
-    port = 9200
+    host='localhost'
+    port=9200
 
     # Create the client with SSL/TLS and hostname verification disabled.
-    client = OpenSearch(
-        hosts = [{'host': host, 'port': port}],
-        http_compress = True, # enables gzip compression for request bodies
-        use_ssl = False,
-        verify_certs = False,
-        ssl_assert_hostname = False,
-        ssl_show_warn = False
+    client=OpenSearch(
+        hosts=[{'host': host, 'port': port}],
+        http_compress=True, # enables gzip compression for request bodies
+        use_ssl=False,
+        verify_certs=False,
+        ssl_assert_hostname=False,
+        ssl_show_warn=False
     )
 
     # Create index
-    index_name = 'enwiki'
-    index_body = {
+    index_name='enwiki'
+    index_body={
         'settings': {
             'index': {
                 'number_of_shards': 2 # Generic advice is 10-50 GB of data per shard
@@ -30,7 +30,7 @@ def index_articles(
         }
     }
 
-    response = client.indices.create(index_name, body=index_body)
+    response=client.indices.create(index_name, body=index_body)
 
     # Counter var for document id
     id=0
@@ -45,16 +45,16 @@ def index_articles(
         page_title=output[0]
         text=output[1]
 
-        document = {
+        document={
             'title': page_title,
             'text': text
         }
 
-        response = client.index(
-            index = 'enwiki',
-            body = document,
-            id = id,
-            refresh = True
+        response=client.index(
+            index='enwiki',
+            body=document,
+            id=id,
+            refresh=True
         )
 
         id+=1
