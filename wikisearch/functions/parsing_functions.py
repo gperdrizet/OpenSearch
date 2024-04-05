@@ -1,6 +1,26 @@
 import multiprocessing
 import mwparserfromhell # type: ignore
 
+def update_cs_index(
+    line: dict,
+    index_name: str,
+    id_num: int
+) -> dict:
+    
+    '''Make some changes to index lines from CirrusSearch
+    dump to make it compatible with OpenSearch'''
+
+    # Remove unsupported '_type'
+    line['index'].pop('_type', None)
+
+    # Add index name
+    line['index']['_index']=index_name
+
+    # replace the id with a sequential number
+    line['index']['_id']=id_num
+
+    return line
+
 def parse_article(
     input_queue: multiprocessing.Queue, 
     output_queue: multiprocessing.Queue

@@ -2,6 +2,7 @@ import json
 from gzip import GzipFile
 
 import wikisearch.functions.IO_functions as io_funcs
+import wikisearch.functions.parsing_functions as parse_funcs
 
 ################################################################################
 
@@ -38,21 +39,15 @@ def run(
         # Convert line to dict
         line=json.loads(line)
 
-        # Need to make some changes to the index dicts to make them
-        # compatible
-
+        # If a line is an index line
         if 'index' in line.keys():
 
-            # Remove unsupported '_type'
-            line['index'].pop('_type', None)
+            # Make some updates to make it compatible with OpenSearch
+            line = parse_funcs.update_cs_index(line, index_name, id_num)
 
-            # Add index name
-            line['index']['_index']=index_name
-
-            # replace the id with a sequential number
-            line['index']['_id']=id_num
-
-            # Increment the id num for next time
+            # Increment the id num for next time: since each article inserted
+            # has an index dict and a content dict, only update when we
+            # find an index dict to get the correct count
             id_num+=1
 
         # Add to batch
