@@ -63,6 +63,8 @@ def index_articles(
     index_name: str,
     shutdown: bool
 ) -> None:
+    
+    '''Indexes articles one at a time from output queue into OpenSearch'''
 
     # Start the OpenSearch client and create the index
     client=start_client(index_name)
