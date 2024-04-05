@@ -1,5 +1,6 @@
 import argparse
 from wikisearch import parse_xml_dump
+from wikisearch import insert_cs_dump
 from wikisearch import test_search
 
 if __name__ == '__main__':
@@ -32,7 +33,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--index',
         required=False,
-        default='enwiki',
+        default='enwiki-cirrussearch',
         help='Name of OpenSearch index for insert'
     )
 
@@ -67,7 +68,11 @@ if __name__ == '__main__':
     # Bulk inserts a CirrusSearch index directly
     # into OpenSearch
     elif args.task == 'insert_cs_dump':
-        pass
+
+        insert_cs_dump.run(
+            input_file=args.input,
+            index_name=args.index
+        )
 
     # Runs interactive command line search utility
     elif args.task == 'test_search':
