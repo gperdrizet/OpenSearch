@@ -4,6 +4,7 @@ from opensearchpy import OpenSearch
 
 def bulk_index_articles(
     output_queue: multiprocessing.Queue,
+    index_name: str,
     shutdown: bool
 ) -> None:
     '''Batch index documents and insert in to OpenSearch from 
@@ -23,7 +24,6 @@ def bulk_index_articles(
     )
 
     # Create index
-    index_name='enwiki'
     index_body={
         'settings': {
             'index': {
@@ -32,7 +32,7 @@ def bulk_index_articles(
         }
     }
 
-    response=client.indices.create(index_name, body=index_body)
+    _=client.indices.create(index_name, body=index_body)
 
     # List to collect articles from queue until we have enough for a batch
     incoming_articles = []

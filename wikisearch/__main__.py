@@ -1,6 +1,6 @@
 import argparse
-from wikisearch import parse_dump
-from wikisearch import search
+from wikisearch import parse_xml_dump
+from wikisearch import test_search
 
 if __name__ == '__main__':
 
@@ -14,7 +14,7 @@ if __name__ == '__main__':
     # Add argument for task to run
     parser.add_argument(
         'task',
-        choices=['update_dump', 'parse_dump', 'search'],
+        choices=['update_xml_dump', 'parse_xml_dump', 'insert_cs_dump', 'test_search'],
         help='Task to run'
     )
 
@@ -27,18 +27,51 @@ if __name__ == '__main__':
         help='Where to output parsed articles'
     )
 
+    # Add argument to specify name of target 
+    # OpenSearch index for insert
+    parser.add_argument(
+        '--index',
+        required=False,
+        default='enwiki',
+        help='Name of OpenSearch index for insert'
+    )
+
+    # Add argument to specify name of input dump file
+    parser.add_argument(
+        '--input',
+        required=False,
+        default='wikisearch/data/enwiki-20240401-cirrussearch-content.json.gz',
+        help='Path to input dump file'
+    )
+
     args=parser.parse_args()
 
     # Decide what to do and how to do it based on
     # user provided arguments
-    if args.task == 'parse_dump':
-        parse_dump.run(args.output)
 
-    elif args.task == 'update_dump':
+    # Parses xml dump. Can insert into OpenSearch or
+    # write article text to files depending on value
+    # of output argument
+    if args.task == 'parse_xml_dump':
+        
+        parse_xml_dump.run(
+            input_file=args.input,
+            index_name=args.index,
+            output_destination=args.output
+        )
+
+    # Planned - gets new xml dump
+    elif args.task == 'update_xml_dump':
         pass
 
-    elif args.task == 'search':
-        search.run()
+    # Bulk inserts a CirrusSearch index directly
+    # into OpenSearch
+    elif args.task == 'insert_cs_dump':
+        pass
+
+    # Runs interactive command line search utility
+    elif args.task == 'test_search':
+        test_search.run()
 
     else:
         print('Unrecognized task, exiting.')

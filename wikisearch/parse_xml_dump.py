@@ -9,7 +9,12 @@ import wikisearch.functions.IO_functions as io_funcs
 
 ################################################################################
 
-def run(output_destination: str) -> None:
+def run(
+    input_file: str,
+    index_name: str,
+    output_destination: str
+) -> None:
+    
     '''Main function to run XML dump parse'''
 
     # Flag to track if we are done
@@ -23,9 +28,7 @@ def run(output_destination: str) -> None:
     input_queue=manager.Queue(maxsize=2000)
     
     # Open bzip data stream from XML dump file
-    wiki=BZ2File(
-        'wikisearch/data/enwiki-20240320-pages-articles-multistream.xml.bz2'
-    )
+    wiki=BZ2File(input_file)
 
     # Instantiate a WikiReader instance, pass it a lambda function
     # to filter record namespaces and our parser's input queue put 
@@ -65,7 +68,7 @@ def run(output_destination: str) -> None:
 
         write_thread=Thread(
             target=io_funcs.bulk_index_articles, 
-            args=(output_queue, shutdown)
+            args=(output_queue, index_name, shutdown)
         )
 
     # Not sure what to do - warn user
