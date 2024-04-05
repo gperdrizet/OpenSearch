@@ -76,4 +76,4 @@ Whelp, it's still singing - just ran to the grocery stor for about and hr and we
 
 ## CirrusSearch revisited
 
-Can't belive that I diden't make this connection before - but 'CirrusSearch bulk insert format' is just that - the bulk import format that we just parsed and formatted the xml dump into. Wow, maybe it's much easier to just load that - we will probably get a much more rich datadabase (i.e. more fields that just title and text) and it will probably be WAY faster. No need to mess around with queues and workers and all of that. Can't belive I diden't figure that out yesterday.
+Can't believe that I didn't make this connection before - but 'CirrusSearch bulk insert format' is just that - the bulk import format that we just parsed and formatted the xml dump into. Wow, maybe it's much easier to just load that - we will probably get a much more rich database (i.e. more fields that just title and text) and it will probably be WAY faster. No need to mess around with queues and workers and all of that. Can't believe I didn't figure that out yesterday.
