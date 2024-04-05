@@ -3,11 +3,10 @@ import mwparserfromhell # type: ignore
 
 def parse_article(
     input_queue: multiprocessing.Queue, 
-    output_queue: multiprocessing.Queue, 
-    shutdown: bool
+    output_queue: multiprocessing.Queue
 ) -> None:
     
-    while not (shutdown and input_queue.empty()):
+    while True:
     
         # Get the page title and the content source from the article queue
         page_title, source=input_queue.get()

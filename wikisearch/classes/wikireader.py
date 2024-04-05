@@ -15,7 +15,7 @@ class WikiReader(ContentHandler):
         self.callback=callback
         
         # Set some initial values
-        self.read_stack= []
+        self.read_stack=[]
         self.read_text=None
         self.read_title=None
         self.read_namespace=None

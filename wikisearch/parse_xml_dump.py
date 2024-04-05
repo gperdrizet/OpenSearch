@@ -1,3 +1,4 @@
+import time
 from multiprocessing import Manager, Process
 from bz2 import BZ2File
 from threading import Thread
@@ -16,9 +17,6 @@ def run(
 ) -> None:
     
     '''Main function to run XML dump parse'''
-
-    # Flag to track if we are done
-    shutdown=False
     
     # Start multiprocessing manager
     manager=Manager()
@@ -48,7 +46,7 @@ def run(
 
         process=Process(
             target=parse_funcs.parse_article, 
-            args=(input_queue, output_queue, shutdown)
+            args=(input_queue, output_queue)
         )
 
         process.start()
@@ -60,7 +58,7 @@ def run(
 
         write_thread=Thread(
             target=io_funcs.write_file, 
-            args=(output_queue, shutdown)
+            args=(output_queue)
         )
 
     # Insert to OpenSearch
@@ -68,17 +66,15 @@ def run(
 
         write_thread=Thread(
             target=io_funcs.bulk_index_articles, 
-            args=(output_queue, index_name, shutdown)
+            args=(output_queue, index_name)
         )
 
     # Not sure what to do - warn user
     else:
-        print(f'Unrecognized output destination: {output_destination}. Exiting')
-        shutdown=True
+        print(f'Unrecognized output destination: {output_destination}.')
 
     # Start the output writer thread
     write_thread.start()
 
     # Send the XML data stream to the reader via xml's sax parser
     sax.parse(wiki, reader)
-    shutdown=True

@@ -77,3 +77,9 @@ Whelp, it's still singing - just ran to the grocery stor for about and hr and we
 ## CirrusSearch revisited
 
 Can't believe that I didn't make this connection before - but 'CirrusSearch bulk insert format' is just that - the bulk import format that we just parsed and formatted the xml dump into. Wow, maybe it's much easier to just load that - we will probably get a much more rich database (i.e. more fields that just title and text) and it will probably be WAY faster. No need to mess around with queues and workers and all of that. Can't believe I didn't figure that out yesterday.
+
+Learning more about the CS dump - turns out it's actually in json lines format. Each line contains one JSON object. This means we could process it line by line, but I would rather be able to just read it without unzipping it first. Let's see...
+
+Yep - seems to work great - we can open the file, then loop on the lines and convert them to dict with JSON loads.
+
+OK, done. It works, and it's fast and MUCH simpler than the XML parse/insert strategy. My only concern is that the resulting database is much more dirty. We've done no cleanup of the text and we have who know what fields in there. Well, at least we have both now to play with.

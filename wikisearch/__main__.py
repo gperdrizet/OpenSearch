@@ -33,7 +33,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--index',
         required=False,
-        default='enwiki-cirrussearch',
+        default='enwiki-xml',
         help='Name of OpenSearch index for insert'
     )
 
@@ -41,7 +41,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--input',
         required=False,
-        default='wikisearch/data/enwiki-20240401-cirrussearch-content.json.gz',
+        default='wikisearch/data/enwiki-20240320-pages-articles-multistream.xml.bz2',
         help='Path to input dump file'
     )
 

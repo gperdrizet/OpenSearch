@@ -1,11 +1,11 @@
 import time
 import multiprocessing
 from opensearchpy import OpenSearch
+from wikisearch.classes.wikireader import WikiReader
 
 def bulk_index_articles(
     output_queue: multiprocessing.Queue,
-    index_name: str,
-    shutdown: bool
+    index_name: str
 ) -> None:
     '''Batch index documents and insert in to OpenSearch from 
     parser output queue'''
@@ -19,8 +19,8 @@ def bulk_index_articles(
     # Counter for insert id
     article_id = 0
 
-    # Loop on queue
-    while not (shutdown and output_queue.empty()):
+    # Loop forever
+    while True:
 
         # Get article from queue
         output=output_queue.get()
@@ -29,7 +29,7 @@ def bulk_index_articles(
         incoming_articles.append(output)
 
         # Once we have 50 articles, process them and index
-        if len(incoming_articles) == 50:
+        if len(incoming_articles) == 500:
             
             # Empty list for batch
             batch = []
@@ -44,7 +44,7 @@ def bulk_index_articles(
                 article_id+=1
 
                 # Create formatted dicts for the request and the content
-                request_header={ "index" : { "_index" : "enwiki", "_id" : article_id } }
+                request_header={ "index" : { "_index" : index_name, "_id" : article_id } }
                 formatted_article={ "title" : page_title, "text" : text }
 
                 # append the new dicts to the existing batch
@@ -60,8 +60,7 @@ def bulk_index_articles(
 
 def index_articles(
     output_queue: multiprocessing.Queue,
-    index_name: str,
-    shutdown: bool
+    index_name: str
 ) -> None:
     
     '''Indexes articles one at a time from output queue into OpenSearch'''
@@ -72,8 +71,8 @@ def index_articles(
     # Counter var for document id
     id=0
 
-    # Loop on queue
-    while not (shutdown and output_queue.empty()):
+    # Loop forever
+    while True:
 
         # Get article from queue
         output=output_queue.get()
@@ -96,13 +95,10 @@ def index_articles(
 
         id+=1
 
-def write_file(
-    output_queue: multiprocessing.Queue,
-    shutdown: bool
-) -> None:
+def write_file(output_queue: multiprocessing.Queue) -> None:
 
-    # Loop on queue
-    while not (shutdown and output_queue.empty()):
+    # Loop forever
+    while True:
 
         # Get article from queue
         output=output_queue.get()
@@ -123,7 +119,7 @@ def write_file(
 def display_status(
     input_queue: multiprocessing.Queue, 
     output_queue: multiprocessing.Queue, 
-    reader
+    reader: WikiReader
 ) -> None:
     
     '''Prints queue sizes every second'''

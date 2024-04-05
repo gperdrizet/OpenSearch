@@ -3,7 +3,6 @@ from gzip import GzipFile
 
 import wikisearch.functions.IO_functions as io_funcs
 
-
 ################################################################################
 
 def run(
@@ -13,6 +12,8 @@ def run(
     
     '''Takes a bz2 format CirrusSearch index dump and 
     bulk inserts it into OpenSearch'''
+
+    print()
 
     # Start the OpenSearch client and create the index
     client=io_funcs.start_client(index_name)
