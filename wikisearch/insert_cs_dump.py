@@ -1,7 +1,8 @@
 import json
 from gzip import GzipFile
-from opensearchpy import OpenSearch
-from boltons.iterutils import remap # type: ignore
+
+import wikisearch.functions.IO_functions as io_funcs
+
 
 ################################################################################
 
@@ -13,30 +14,8 @@ def run(
     '''Takes a bz2 format CirrusSearch index dump and 
     bulk inserts it into OpenSearch'''
 
-    # Set host and port
-    host='localhost'
-    port=9200
-
-    # Create the client with SSL/TLS and hostname verification disabled.
-    client=OpenSearch(
-        hosts=[{'host': host, 'port': port}],
-        http_compress=True, # enables gzip compression for request bodies
-        use_ssl=False,
-        verify_certs=False,
-        ssl_assert_hostname=False,
-        ssl_show_warn=False
-    )
-
-    # Create index
-    index_body={
-        'settings': {
-            'index': {
-                'number_of_shards': 2 # Generic advice is 10-50 GB of data per shard
-            }
-        }
-    }
-
-    _=client.indices.create(index_name, body=index_body)
+    # Start the OpenSearch client and create the index
+    client=io_funcs.start_client(index_name)
 
     # Open the input file with gzip
     wiki=GzipFile(input_file)
