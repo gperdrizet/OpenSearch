@@ -1,17 +1,13 @@
 from xml.sax import ContentHandler
-import logging
-
-logger=logging.getLogger(__name__)
 
 class WikiReader(ContentHandler):
     '''Class to read tags parsed from bz2 data stream 
     via xml.sax's parser'''
     
-    def __init__(self, ns_filter, callback):
+    def __init__(self, callback):
         super().__init__()
 
-        # Add namespace filter and parser queue callback function
-        self.filter=ns_filter
+        # Add parser queue callback function
         self.callback=callback
         
         # Set some initial values

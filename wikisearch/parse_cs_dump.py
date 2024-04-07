@@ -1,11 +1,11 @@
-from bz2 import BZ2File
+import json
+from gzip import GzipFile
 from multiprocessing import Manager, Process
 from threading import Thread
-from xml import sax
 
-from wikisearch.classes.wikireader import WikiReader
-import wikisearch.functions.parsing_functions as parse_funcs
+from wikisearch.classes.cirrussearch_reader import CirrusSearchReader
 import wikisearch.functions.IO_functions as io_funcs
+import wikisearch.functions.parsing_functions as parse_funcs
 
 ################################################################################
 
@@ -15,22 +15,21 @@ def run(
     output_destination: str
 ) -> None:
     
-    '''Main function to run XML dump parse'''
-    
+    '''Main function to run CirrusSearch dump parse'''
+
     # Start multiprocessing manager
     manager=Manager()
 
     # Set-up queues
     output_queue=manager.Queue(maxsize=2000)
     input_queue=manager.Queue(maxsize=2000)
-    
-    # Open bzip data stream from XML dump file
-    wiki=BZ2File(input_file)
 
-    # Instantiate a WikiReader instance, pass it a lambda function
-    # to filter record namespaces and our parser's input queue put 
-    # function to be used as a callback for when we find article text
-    reader=WikiReader(input_queue.put)
+    # Open the input file with gzip
+    wiki=GzipFile(input_file)
+
+    # Instantiate a CirrusSearch instance, pass our parser's 
+    # input queue put function to be used as a callback 
+    reader=CirrusSearchReader(input_queue.put)
 
     # Start the status monitor printout
     status=Thread(
@@ -76,4 +75,33 @@ def run(
     write_thread.start()
 
     # Send the XML data stream to the reader via xml's sax parser
-    sax.parse(wiki, reader)
+    for line in wiki:
+
+        # Convert line to dict
+        line=json.loads(line)
+
+        # If a line is an index line
+        if 'index' in line.keys():
+
+            # Make some updates to make it compatible with OpenSearch
+            line = parse_funcs.update_cs_index(line, index_name, id_num)
+
+            # Increment the id num for next time: since each article inserted
+            # has an index dict and a content dict, only update when we
+            # find an index dict to get the correct count
+            id_num+=1
+
+        # Add to batch
+        batch.append(line)
+
+        # Once we have 1000 lines, write to chosen output
+        if len(batch) == 1000:
+            
+            _=client.bulk(batch)
+
+            # Clear the batch to collect the next
+            batch = []
+
+            # Count it
+            batch_count+=1
+            print(f'Batch {batch_count} inserted', end='\r')

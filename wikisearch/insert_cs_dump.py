@@ -53,8 +53,9 @@ def run(
         # Add to batch
         batch.append(line)
 
-        # Once we have 1000 lines, bulk insert them
+        # Once we have 1000 lines, write to chosen output
         if len(batch) == 1000:
+            
             _=client.bulk(batch)
 
             # Clear the batch to collect the next

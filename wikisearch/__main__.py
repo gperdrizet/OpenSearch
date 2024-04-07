@@ -1,6 +1,7 @@
 import argparse
 from wikisearch import parse_xml_dump
 from wikisearch import insert_cs_dump
+from wikisearch import parse_cs_dump
 from wikisearch import test_search
 
 if __name__ == '__main__':
@@ -15,7 +16,7 @@ if __name__ == '__main__':
     # Add argument for task to run
     parser.add_argument(
         'task',
-        choices=['update_xml_dump', 'parse_xml_dump', 'insert_cs_dump', 'test_search'],
+        choices=['update_xml_dump', 'parse_xml_dump', 'parse_cs_dump', 'test_search'],
         help='Task to run'
     )
 
@@ -67,9 +68,9 @@ if __name__ == '__main__':
 
     # Bulk inserts a CirrusSearch index directly
     # into OpenSearch
-    elif args.task == 'insert_cs_dump':
+    elif args.task == 'parse_cs_dump':
 
-        insert_cs_dump.run(
+        parse_cs_dump.run(
             input_file=args.input,
             index_name=args.index
         )
