@@ -43,8 +43,8 @@ def run(
     for _ in range(15):
 
         process=Process(
-            target=parse_funcs.parse_article, 
-            args=(input_queue, output_queue)
+            target=parse_funcs.parse_cirrussearch_article, 
+            args=(input_queue, output_queue, index_name)
         )
 
         process.start()

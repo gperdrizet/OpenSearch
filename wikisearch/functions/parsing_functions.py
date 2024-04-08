@@ -1,6 +1,23 @@
 import multiprocessing
 import mwparserfromhell # type: ignore
 
+def parse_cirrussearch_article(
+    input_queue: multiprocessing.Queue, 
+    output_queue: multiprocessing.Queue,
+    index_name: str
+) -> None:
+    
+    while True:
+
+        # Get the header and the content source from the article queue
+        header, content, article_num=input_queue.get()
+
+        # Make some updates to the header to make it compatible with OpenSearch
+        header = update_cs_index(header, index_name, article_num)
+
+        # Put the result into the output queue
+        output_queue.put((header, content))
+
 def update_cs_index(
     line: dict,
     index_name: str,
@@ -21,7 +38,7 @@ def update_cs_index(
 
     return line
 
-def parse_article(
+def parse_xml_article(
     input_queue: multiprocessing.Queue, 
     output_queue: multiprocessing.Queue
 ) -> None:

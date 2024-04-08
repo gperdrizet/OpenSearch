@@ -30,8 +30,9 @@ class CirrusSearchReader():
 
     def flush_buffer(self):
 
-        # Put the buffer contents into the parser
-        # input queue
+        # Add the article number and put the buffer 
+        # contents into the parser input queue
+        self.buffer.append(self.status_count)
         self.callback(self.buffer)
 
         # Clear the buffer
