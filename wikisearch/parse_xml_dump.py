@@ -45,7 +45,7 @@ def run(
 
         process=Process(
             target=parse_funcs.parse_xml_article, 
-            args=(input_queue, output_queue)
+            args=(input_queue, output_queue, index_name)
         )
 
         process.start()

@@ -40,13 +40,14 @@ def update_cs_index(
 
 def parse_xml_article(
     input_queue: multiprocessing.Queue, 
-    output_queue: multiprocessing.Queue
+    output_queue: multiprocessing.Queue,
+    index_name: str
 ) -> None:
     
     while True:
     
         # Get the page title and the content source from the article queue
-        page_title, source=input_queue.get()
+        page_title, source, article_num=input_queue.get()
 
         # Convert source string to wikicode
         wikicode=mwparserfromhell.parse(source)
@@ -74,8 +75,13 @@ def parse_xml_article(
             # Get rid of image thumbnail lines and leading spaces
             source_string=remove_thumbnails(source_string)
 
+            # Create formatted dicts for the request and the 
+            # content to send to open search
+            request_header={"index" : {"_index" : index_name, "_id" : article_num}}
+            formatted_article={"title" : page_title, "text" : source_string}
+
             # Put the result into the output queue
-            output_queue.put((page_title, source_string))
+            output_queue.put((request_header, formatted_article))
 
 
 def fix_bad_symbols(source_string: str) -> str:

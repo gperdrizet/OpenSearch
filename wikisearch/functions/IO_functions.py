@@ -16,9 +16,6 @@ def bulk_index_articles(
     # List to collect articles from queue until we have enough for a batch
     incoming_articles = []
 
-    # Counter for insert id
-    article_id = 0
-
     # Loop forever
     while True:
 
@@ -26,33 +23,13 @@ def bulk_index_articles(
         output=output_queue.get()
 
         # Add it to batch
-        incoming_articles.append(output)
+        incoming_articles.extend(output)
 
-        # Once we have 50 articles, process them and index
-        if len(incoming_articles) == 500:
-            
-            # Empty list for batch
-            batch = []
-
-            for article in incoming_articles:
-
-                # Extract title and text
-                page_title=article[0]
-                text=article[1]
-
-                # Count it
-                article_id+=1
-
-                # Create formatted dicts for the request and the content
-                request_header={ "index" : { "_index" : index_name, "_id" : article_id } }
-                formatted_article={ "title" : page_title, "text" : text }
-
-                # append the new dicts to the existing batch
-                batch.append(request_header)
-                batch.append(formatted_article)
+        # Once we have 500 articles, process them and index
+        if len(incoming_articles) / 2 == 500:
 
             # Once we have all of the articles formatted and collected, insert them
-            _=client.bulk(batch)
+            _=client.bulk(incoming_articles)
 
             # Empty the list of articles to collect the next batch
             incoming_articles = []
@@ -108,7 +85,7 @@ def write_file(
 
         # Extract title and text
         title=output[1]['title']
-        content=str(output[1])
+        content=output[1]['text']
 
         # Format page title for use as a filename
         file_name=title.replace(' ', '_')
