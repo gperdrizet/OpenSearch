@@ -57,7 +57,7 @@ def run(
 
         write_thread=Thread(
             target=io_funcs.write_file, 
-            args=(output_queue)
+            args=(output_queue, 'xml')
         )
 
     # Insert to OpenSearch

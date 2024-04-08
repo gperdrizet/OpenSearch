@@ -100,23 +100,30 @@ def write_file(
     article_source: str
 ) -> None:
 
+    # File counter
+    file_num = 0
+
     # Loop forever
     while True:
 
         # Get article from queue
         output=output_queue.get()
 
+        article = str(output[0]) + '\n' + str(output[1])
+
         # Extract title and text
-        page_title=output[0]
-        text=output[1]
+        title=output[1]['title']
+        content=str(output[1])
 
         # Format page title for use as a filename
-        filename=page_title.replace(' ', '_')
-        filename=filename.replace('/', '-')
+        file_name=title.replace(' ', '_')
+        file_name=file_name.replace('/', '-')
 
         # Save article to a file
-        with open(f"wikisearch/data/articles/{article_source}/{filename}", 'w') as text_file:
-            text_file.write(text)
+        with open(f"wikisearch/data/articles/{article_source}/{file_name}", 'w') as text_file:
+            text_file.write(f'{title}\n{content}')
+
+        file_num += 1
 
 
 def display_status(
