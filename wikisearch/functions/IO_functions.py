@@ -95,7 +95,10 @@ def index_articles(
 
         id+=1
 
-def write_file(output_queue: multiprocessing.Queue) -> None:
+def write_file(
+    output_queue: multiprocessing.Queue,
+    article_source: str
+) -> None:
 
     # Loop forever
     while True:
@@ -112,7 +115,7 @@ def write_file(output_queue: multiprocessing.Queue) -> None:
         filename=filename.replace('/', '-')
 
         # Save article to a file
-        with open(f"wikisearch/data/articles/{filename}", 'w') as text_file:
+        with open(f"wikisearch/data/articles/{article_source}/{filename}", 'w') as text_file:
             text_file.write(text)
 
 

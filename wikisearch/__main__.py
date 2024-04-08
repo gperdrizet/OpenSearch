@@ -42,7 +42,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--input',
         required=False,
-        default='wikisearch/data/enwiki-20240320-pages-articles-multistream.xml.bz2',
+        default=None,
         help='Path to input dump file'
     )
 
@@ -55,29 +55,48 @@ if __name__ == '__main__':
     # write article text to files depending on value
     # of output argument
     if args.task == 'parse_xml_dump':
+
+        # Pick the input file - set default or use the command line
+        # argument value if set
+        if args.input == None:
+            input_file='wikisearch/data/enwiki-20240320-pages-articles-multistream.xml.bz2'
+
+        else:
+            input_file=args.input
         
+        # Start the run
         parse_xml_dump.run(
-            input_file=args.input,
+            input_file=input_file,
             index_name=args.index,
             output_destination=args.output
         )
-
-    # Planned - gets new xml dump
-    elif args.task == 'update_xml_dump':
-        pass
 
     # Bulk inserts a CirrusSearch index directly
     # into OpenSearch
     elif args.task == 'parse_cs_dump':
 
+        # Pick the input file - set default or use the command line
+        # argument value if set
+        if args.input == None:
+            input_file='wikisearch/data/enwiki-20240401-cirrussearch-content.json.gz'
+
+        else:
+            input_file=args.input
+
+        # Start the run
         parse_cs_dump.run(
-            input_file=args.input,
-            index_name=args.index
+            input_file=input_file,
+            index_name=args.index,
+            output_destination=args.output
         )
 
     # Runs interactive command line search utility
     elif args.task == 'test_search':
         test_search.run()
+
+    # Planned - gets new xml dump
+    elif args.task == 'update_xml_dump':
+        pass
 
     else:
         print('Unrecognized task, exiting.')

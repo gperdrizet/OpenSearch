@@ -56,7 +56,7 @@ def run(
 
         write_thread=Thread(
             target=io_funcs.write_file, 
-            args=(output_queue)
+            args=(output_queue, 'cirrus_search')
         )
 
     # Insert to OpenSearch
@@ -77,31 +77,4 @@ def run(
     # Send the XML data stream to the reader via xml's sax parser
     for line in wiki:
 
-        # Convert line to dict
-        line=json.loads(line)
-
-        # If a line is an index line
-        if 'index' in line.keys():
-
-            # Make some updates to make it compatible with OpenSearch
-            line = parse_funcs.update_cs_index(line, index_name, id_num)
-
-            # Increment the id num for next time: since each article inserted
-            # has an index dict and a content dict, only update when we
-            # find an index dict to get the correct count
-            id_num+=1
-
-        # Add to batch
-        batch.append(line)
-
-        # Once we have 1000 lines, write to chosen output
-        if len(batch) == 1000:
-            
-            _=client.bulk(batch)
-
-            # Clear the batch to collect the next
-            batch = []
-
-            # Count it
-            batch_count+=1
-            print(f'Batch {batch_count} inserted', end='\r')
+        reader.read_line(line)
