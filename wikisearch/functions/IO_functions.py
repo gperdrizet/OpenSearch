@@ -100,16 +100,11 @@ def write_file(
     article_source: str
 ) -> None:
 
-    # File counter
-    file_num = 0
-
     # Loop forever
     while True:
 
         # Get article from queue
         output=output_queue.get()
-
-        article = str(output[0]) + '\n' + str(output[1])
 
         # Extract title and text
         title=output[1]['title']
@@ -122,8 +117,6 @@ def write_file(
         # Save article to a file
         with open(f"wikisearch/data/articles/{article_source}/{file_name}", 'w') as text_file:
             text_file.write(f'{title}\n{content}')
-
-        file_num += 1
 
 
 def display_status(
