@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--index',
         required=False,
-        default='enwiki-xml',
+        default=None,
         help='Name of OpenSearch index for insert'
     )
 
@@ -63,11 +63,19 @@ if __name__ == '__main__':
 
         else:
             input_file=args.input
+
+        # Pick the index name - set default or use the command line
+        # argument value if set
+        if args.index == None:
+            index_name='enwiki-xml'
+
+        else:
+            index_name=args.index
         
         # Start the run
         parse_xml_dump.run(
             input_file=input_file,
-            index_name=args.index,
+            index_name=index_name,
             output_destination=args.output
         )
 
@@ -83,10 +91,18 @@ if __name__ == '__main__':
         else:
             input_file=args.input
 
+        # Pick the index name - set default or use the command line
+        # argument value if set
+        if args.index == None:
+            index_name='enwiki-cs'
+
+        else:
+            index_name=args.index
+
         # Start the run
         parse_cs_dump.run(
             input_file=input_file,
-            index_name=args.index,
+            index_name=index_name,
             output_destination=args.output
         )
 
