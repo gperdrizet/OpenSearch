@@ -86,7 +86,7 @@ OK, done. It works, and it's fast and MUCH simpler than the XML parse/insert str
 
 ## Additional considerations
 
-### Performance
+### Performance - CirrusSearch
 
 Added threading to the bulk insert function - this required the switch from inserting to upserting with a single create index call early in execution. Works great after some tinkering. Now we have to manually tune a few parameters to keep the queues flowing:
 
@@ -101,3 +101,13 @@ opensearchpy.exceptions.ConnectionTimeout: ConnectionTimeout caused by - ReadTim
 ```
 
 After ~2 min. of run time. Good news is it's way faster now - we are doing ~750 articles per second. Seems like CPU is limiting - using ~90% and ~100 GB system memory. Docker network sees RX/TX of 12/22 MiB/sec.
+
+### Performance - XML
+
+Same considerations, but the parser is slower so the optimal worker counts etc. are different - more parser threads and less upserter threads. Overall, XML parsing/indexing is less performant than CirrusSearch but that is probably because we are doing much more parsing/cleaning of the wikicode source, rather than just jamming the whole thing into OpenSearch like we do for CirrusSearch. Here are some numbers:
+
+1. Number of parser processes (current: 12)
+2. Number of upserter processes (current: 7)
+3. Size of each bulk upsert (current: 50)
+
+Gives an insert rate of ~65 articles per second, or on the order of 10x slower than CirrusSearch.
