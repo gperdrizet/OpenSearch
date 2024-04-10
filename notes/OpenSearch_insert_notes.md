@@ -83,3 +83,21 @@ Learning more about the CS dump - turns out it's actually in json lines format. 
 Yep - seems to work great - we can open the file, then loop on the lines and convert them to dict with JSON loads.
 
 OK, done. It works, and it's fast and MUCH simpler than the XML parse/insert strategy. My only concern is that the resulting database is much more dirty. We've done no cleanup of the text and we have who know what fields in there. Well, at least we have both now to play with.
+
+## Additional considerations
+
+### Performance
+
+Added threading to the bulk insert function - this required the switch from inserting to upserting with a single create index call early in execution. Works great after some tinkering. Now we have to manually tune a few parameters to keep the queues flowing:
+
+1. Number of parser processes (current: 1)
+2. Number of upserter processes (current: 10)
+3. Size of each bulk upsert (current: 50)
+
+Also, added another OpenSearch node and gave each 32 GB memory. Still running into some 'help, I'm swamped!' type errors. Will need to tinker a bit more to get a good insert speed that doesn't choke. Latest error is:
+
+```text
+opensearchpy.exceptions.ConnectionTimeout: ConnectionTimeout caused by - ReadTimeoutError(HTTPConnectionPool(host='localhost', port=9200): Read timed out. (read timeout=10))
+```
+
+After ~2 min. of run time. Good news is it's way faster now - we are doing ~750 articles per second. Seems like CPU is limiting - using ~90% and ~100 GB system memory. Docker network sees RX/TX of 12/22 MiB/sec.

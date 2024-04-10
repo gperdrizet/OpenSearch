@@ -279,9 +279,9 @@ After some deeper reading in the documentation I found that we have two options 
 1. Set up and use a demo config to get started
 2. Remove the security plugin from the nodes and the dashboard and run without it
 
-Apparently the instructions in the 'quickstart' portion of the documentation doesn't really do either correctly. Here is a functioning docker-compose.yaml [from a bit deeper into the docs](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/docker/).
+Apparently the instructions in the 'quickstart' portion of the documentation doesn't really do either correctly. Here is a functioning docker-compose.yaml [from a bit deeper into the docs](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/docker/) that has been modified to start three nodes with 32 GB memory per node.
 
-```text
+```yaml
 version: '3'
 services:
   opensearch-node1:
@@ -290,10 +290,10 @@ services:
     environment:
       - cluster.name=opensearch-cluster # Name the cluster
       - node.name=opensearch-node1 # Name the node that will run in this container
-      - discovery.seed_hosts=opensearch-node1,opensearch-node2 # Nodes to look for when discovering the cluster
-      - cluster.initial_cluster_manager_nodes=opensearch-node1,opensearch-node2 # Nodes eligibile to serve as cluster manager
+      - discovery.seed_hosts=opensearch-node1,opensearch-node2,opensearch-node3 # Nodes to look for when discovering the cluster
+      - cluster.initial_cluster_manager_nodes=opensearch-node1,opensearch-node2,opensearch-node3 # Nodes eligibile to serve as cluster manager
       - bootstrap.memory_lock=true # Disable JVM heap memory swapping
-      - "OPENSEARCH_JAVA_OPTS=-Xms64g -Xmx64g" # Set min and max JVM heap sizes to at least 50% of system RAM
+      - "OPENSEARCH_JAVA_OPTS=-Xms32g -Xmx32g" # Set min and max JVM heap sizes to at least 50% of system RAM
       - "DISABLE_INSTALL_DEMO_CONFIG=true" # Prevents execution of bundled demo script which installs demo certificates and security configurations to OpenSearch
       - "DISABLE_SECURITY_PLUGIN=true" # Disables Security plugin
     ulimits:
@@ -310,16 +310,17 @@ services:
       - 9600:9600 # Performance Analyzer
     networks:
       - opensearch-net # All of the containers will join the same Docker bridge network
+
   opensearch-node2:
     image: opensearchproject/opensearch:latest
     container_name: opensearch-node2
     environment:
       - cluster.name=opensearch-cluster # Name the cluster
       - node.name=opensearch-node2 # Name the node that will run in this container
-      - discovery.seed_hosts=opensearch-node1,opensearch-node2 # Nodes to look for when discovering the cluster
-      - cluster.initial_cluster_manager_nodes=opensearch-node1,opensearch-node2 # Nodes eligibile to serve as cluster manager
+      - discovery.seed_hosts=opensearch-node1,opensearch-node2,opensearch-node3 # Nodes to look for when discovering the cluster
+      - cluster.initial_cluster_manager_nodes=opensearch-node1,opensearch-node2,opensearch-node3 # Nodes eligibile to serve as cluster manager
       - bootstrap.memory_lock=true # Disable JVM heap memory swapping
-      - "OPENSEARCH_JAVA_OPTS=-Xms64g -Xmx64g" # Set min and max JVM heap sizes to at least 50% of system RAM
+      - "OPENSEARCH_JAVA_OPTS=-Xms32g -Xmx32g" # Set min and max JVM heap sizes to at least 50% of system RAM
       - "DISABLE_INSTALL_DEMO_CONFIG=true" # Prevents execution of bundled demo script which installs demo certificates and security configurations to OpenSearch
       - "DISABLE_SECURITY_PLUGIN=true" # Disables Security plugin
     ulimits:
@@ -333,6 +334,31 @@ services:
       - opensearch-data2:/usr/share/opensearch/data # Creates volume called opensearch-data2 and mounts it to the container
     networks:
       - opensearch-net # All of the containers will join the same Docker bridge network
+
+  opensearch-node3:
+    image: opensearchproject/opensearch:latest
+    container_name: opensearch-node3
+    environment:
+      - cluster.name=opensearch-cluster # Name the cluster
+      - node.name=opensearch-node3 # Name the node that will run in this container
+      - discovery.seed_hosts=opensearch-node1,opensearch-node2,opensearch-node3 # Nodes to look for when discovering the cluster
+      - cluster.initial_cluster_manager_nodes=opensearch-node1,opensearch-node2,opensearch-node3 # Nodes eligibile to serve as cluster manager
+      - bootstrap.memory_lock=true # Disable JVM heap memory swapping
+      - "OPENSEARCH_JAVA_OPTS=-Xms32g -Xmx32g" # Set min and max JVM heap sizes to at least 50% of system RAM
+      - "DISABLE_INSTALL_DEMO_CONFIG=true" # Prevents execution of bundled demo script which installs demo certificates and security configurations to OpenSearch
+      - "DISABLE_SECURITY_PLUGIN=true" # Disables Security plugin
+    ulimits:
+      memlock:
+        soft: -1 # Set memlock to unlimited (no soft or hard limit)
+        hard: -1
+      nofile:
+        soft: 65536 # Maximum number of open files for the opensearch user - set to at least 65536
+        hard: 65536
+    volumes:
+      - opensearch-data3:/usr/share/opensearch/data # Creates volume called opensearch-data2 and mounts it to the container
+    networks:
+      - opensearch-net # All of the containers will join the same Docker bridge network
+
   opensearch-dashboards:
     image: opensearchproject/opensearch-dashboards:latest
     container_name: opensearch-dashboards
@@ -341,7 +367,7 @@ services:
     expose:
       - "5601" # Expose port 5601 for web access to OpenSearch Dashboards
     environment:
-      - 'OPENSEARCH_HOSTS=["http://opensearch-node1:9200","http://opensearch-node2:9200"]'
+      - 'OPENSEARCH_HOSTS=["http://opensearch-node1:9200","http://opensearch-node2:9200","http://opensearch-node3:9200"]'
       - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true" # disables security dashboards plugin in OpenSearch Dashboards
     networks:
       - opensearch-net
@@ -349,6 +375,7 @@ services:
 volumes:
   opensearch-data1:
   opensearch-data2:
+  opensearch-data3:
 
 networks:
   opensearch-net:
