@@ -85,7 +85,8 @@ def write_file(
 
         # Extract title and text
         title=output[1]['title']
-        content=output[1]['text']
+        #content=output[1]['text']
+        content=str(output[0]) + '\n' + str(output[1])
 
         # Format page title for use as a filename
         file_name=title.replace(' ', '_')
@@ -129,19 +130,22 @@ def start_client(index_name: str) -> OpenSearch:
         ssl_show_warn=False
     )
 
-    # Delete the index we are trying to create if it exists
-    if client.indices.exists(index=index_name):
-        _=client.indices.delete(index=index_name)
+    # # Delete the index we are trying to create if it exists
+    # if client.indices.exists(index=index_name):
+    #     _=client.indices.delete(index=index_name)
 
-    # Create index
-    index_body={
-        'settings': {
-            'index': {
-                'number_of_shards': 2 # Generic advice is 10-50 GB of data per shard
+    # Create the target index if it does not exist
+    if client.indices.exists(index=index_name) == False:
+
+        # Create index
+        index_body={
+            'settings': {
+                'index': {
+                    'number_of_shards': 2 # Generic advice is 10-50 GB of data per shard
+                }
             }
         }
-    }
 
-    _=client.indices.create(index_name, body=index_body)
+        _=client.indices.create(index_name, body=index_body)
 
     return client

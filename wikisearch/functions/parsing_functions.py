@@ -13,7 +13,12 @@ def parse_cirrussearch_article(
         header, content, article_num=input_queue.get()
 
         # Make some updates to the header to make it compatible with OpenSearch
-        header = update_cs_index(header, index_name, article_num)
+        header=update_cs_index(header, index_name, article_num)
+
+        # Alter the content format for upserting
+        upsert_content={}
+        upsert_content['doc']=content
+        upsert_content['doc_as_upsert']=True
 
         # Put the result into the output queue
         output_queue.put((header, content))
@@ -33,8 +38,11 @@ def update_cs_index(
     # Add index name
     line['index']['_index']=index_name
 
-    # replace the id with a sequential number
+    # Replace the id with a sequential number
     line['index']['_id']=id_num
+
+    # Change index key to update for upserting
+    line['update']=line.pop('index')
 
     return line
 

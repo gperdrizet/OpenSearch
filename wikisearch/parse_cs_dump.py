@@ -39,40 +39,59 @@ def run(
 
     status.start() 
 
-    # Start 15 parser jobs
-    for _ in range(15):
+    # Start parser jobs
+    for _ in range(1):
 
-        process=Process(
+        parse_process=Process(
             target=parse_funcs.parse_cirrussearch_article, 
             args=(input_queue, output_queue, index_name)
         )
 
-        process.start()
+        parse_process.start()
 
     # Target the correct output function
 
-    # Save to file
-    if output_destination == 'file':
+    # Start writer jobs
+    for _ in range(18):
 
-        write_thread=Thread(
-            target=io_funcs.write_file, 
-            args=(output_queue, 'cirrus_search')
-        )
+        # Save to file
+        if output_destination == 'file':
 
-    # Insert to OpenSearch
-    elif output_destination == 'opensearch':
+            write_process=Process(
+                target=io_funcs.write_file, 
+                args=(output_queue, 'cirrus_search')
+            )
 
-        write_thread=Thread(
-            target=io_funcs.bulk_index_articles, 
-            args=(output_queue, index_name)
-        )
+        # Insert to OpenSearch
+        elif output_destination == 'opensearch':
 
-    # Not sure what to do - warn user
-    else:
-        print(f'Unrecognized output destination: {output_destination}.')
+            write_process=Process(
+                target=io_funcs.bulk_index_articles, 
+                args=(output_queue, index_name)
+            )
 
-    # Start the output writer thread
-    write_thread.start()
+    # # Save to file
+    # if output_destination == 'file':
+
+    #     write_thread=Thread(
+    #         target=io_funcs.write_file, 
+    #         args=(output_queue, 'cirrus_search')
+    #     )
+
+    # # Insert to OpenSearch
+    # elif output_destination == 'opensearch':
+
+    #     write_thread=Thread(
+    #         target=io_funcs.bulk_index_articles, 
+    #         args=(output_queue, index_name)
+    #     )
+
+        # Not sure what to do - warn user
+        else:
+            print(f'Unrecognized output destination: {output_destination}.')
+
+        # Start the output writer thread
+        write_process.start()
 
     # Send the XML data stream to the reader via xml's sax parser
     for line in wiki:
