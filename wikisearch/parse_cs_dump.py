@@ -24,6 +24,9 @@ def run(
     output_queue=manager.Queue(maxsize=2000)
     input_queue=manager.Queue(maxsize=2000)
 
+    # Initialize the target index
+    _=io_funcs.initialize_index(index_name)
+
     # Open the input file with gzip
     wiki=GzipFile(input_file)
 
@@ -52,7 +55,7 @@ def run(
     # Target the correct output function
 
     # Start writer jobs
-    for _ in range(18):
+    for _ in range(10):
 
         # Save to file
         if output_destination == 'file':

@@ -18,10 +18,10 @@ def parse_cirrussearch_article(
         # Alter the content format for upserting
         upsert_content={}
         upsert_content['doc']=content
-        upsert_content['doc_as_upsert']=True
+        upsert_content['doc_as_upsert']='true'
 
         # Put the result into the output queue
-        output_queue.put((header, content))
+        output_queue.put((header, upsert_content))
 
 def update_cs_index(
     line: dict,

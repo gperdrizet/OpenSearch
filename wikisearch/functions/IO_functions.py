@@ -26,7 +26,7 @@ def bulk_index_articles(
         incoming_articles.extend(output)
 
         # Once we have 500 articles, process them and index
-        if len(incoming_articles) / 2 == 500:
+        if len(incoming_articles) / 2 == 50:
 
             # Once we have all of the articles formatted and collected, insert them
             _=client.bulk(incoming_articles)
@@ -84,7 +84,7 @@ def write_file(
         output=output_queue.get()
 
         # Extract title and text
-        title=output[1]['title']
+        title=output[1]['doc']['title']
         #content=output[1]['text']
         content=str(output[0]) + '\n' + str(output[1])
 
@@ -130,9 +130,15 @@ def start_client(index_name: str) -> OpenSearch:
         ssl_show_warn=False
     )
 
-    # # Delete the index we are trying to create if it exists
-    # if client.indices.exists(index=index_name):
-    #     _=client.indices.delete(index=index_name)
+    return client
+
+def initialize_index(index_name: str) -> None:
+
+    client=start_client(index_name)
+
+    # Delete the index we are trying to create if it exists
+    if client.indices.exists(index=index_name):
+        _=client.indices.delete(index=index_name)
 
     # Create the target index if it does not exist
     if client.indices.exists(index=index_name) == False:
@@ -148,4 +154,5 @@ def start_client(index_name: str) -> OpenSearch:
 
         _=client.indices.create(index_name, body=index_body)
 
-    return client
+    # Close client
+    client.close()
