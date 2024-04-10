@@ -55,7 +55,7 @@ def run(
     # Target the correct output function
 
     # Start writer jobs
-    for _ in range(10):
+    for _ in range(5):
 
         # Save to file
         if output_destination == 'file':
@@ -72,22 +72,6 @@ def run(
                 target=io_funcs.bulk_index_articles, 
                 args=(output_queue, index_name)
             )
-
-    # # Save to file
-    # if output_destination == 'file':
-
-    #     write_thread=Thread(
-    #         target=io_funcs.write_file, 
-    #         args=(output_queue, 'cirrus_search')
-    #     )
-
-    # # Insert to OpenSearch
-    # elif output_destination == 'opensearch':
-
-    #     write_thread=Thread(
-    #         target=io_funcs.bulk_index_articles, 
-    #         args=(output_queue, index_name)
-    #     )
 
         # Not sure what to do - warn user
         else:

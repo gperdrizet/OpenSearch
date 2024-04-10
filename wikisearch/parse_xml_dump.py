@@ -23,6 +23,9 @@ def run(
     # Set-up queues
     output_queue=manager.Queue(maxsize=2000)
     input_queue=manager.Queue(maxsize=2000)
+
+    # Initialize the target index
+    _=io_funcs.initialize_index(index_name)
     
     # Open bzip data stream from XML dump file
     wiki=BZ2File(input_file)
@@ -40,8 +43,8 @@ def run(
 
     status.start() 
 
-    # Start 15 parser jobs
-    for _ in range(15):
+    # Start parser jobs
+    for _ in range(12):
 
         process=Process(
             target=parse_funcs.parse_xml_article, 
@@ -52,28 +55,31 @@ def run(
 
     # Target the correct output function
 
-    # Save to file
-    if output_destination == 'file':
+    # Start writer jobs
+    for _ in range(7):
 
-        write_thread=Thread(
-            target=io_funcs.write_file, 
-            args=(output_queue, 'xml')
-        )
+        # Save to file
+        if output_destination == 'file':
 
-    # Insert to OpenSearch
-    elif output_destination == 'opensearch':
+            write_process=Process(
+                target=io_funcs.write_file, 
+                args=(output_queue, 'xml')
+            )
 
-        write_thread=Thread(
-            target=io_funcs.bulk_index_articles, 
-            args=(output_queue, index_name)
-        )
+        # Insert to OpenSearch
+        elif output_destination == 'opensearch':
 
-    # Not sure what to do - warn user
-    else:
-        print(f'Unrecognized output destination: {output_destination}.')
+            write_process=Process(
+                target=io_funcs.bulk_index_articles, 
+                args=(output_queue, index_name)
+            )
 
-    # Start the output writer thread
-    write_thread.start()
+        # Not sure what to do - warn user
+        else:
+            print(f'Unrecognized output destination: {output_destination}.')
+
+        # Start the output writer thread
+        write_process.start()
 
     # Send the XML data stream to the reader via xml's sax parser
     sax.parse(wiki, reader)

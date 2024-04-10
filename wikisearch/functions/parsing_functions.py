@@ -85,8 +85,8 @@ def parse_xml_article(
 
             # Create formatted dicts for the request and the 
             # content to send to open search
-            request_header={"index" : {"_index" : index_name, "_id" : article_num}}
-            formatted_article={"title" : page_title, "text" : source_string}
+            request_header={'update': {'_index': index_name, '_id': article_num}}
+            formatted_article={'doc': {'title': page_title, 'text': source_string}, 'doc_as_upsert': 'true'}
 
             # Put the result into the output queue
             output_queue.put((request_header, formatted_article))
