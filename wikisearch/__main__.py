@@ -87,7 +87,9 @@ if __name__ == '__main__':
             index_name=index_name,
             output_destination=args.output,
             reader_instance=XMLReader(),
-            parser_function=parse_xml_article
+            parser_function=parse_xml_article,
+            parse_workers=15,
+            upsert_workers=1
         )
 
     # Bulk inserts a CirrusSearch index directly
@@ -117,7 +119,9 @@ if __name__ == '__main__':
             index_name=index_name,
             output_destination=args.output,
             reader_instance=CirrusSearchReader(),
-            parser_function=parse_cirrussearch_article
+            parser_function=parse_cirrussearch_article,
+            parse_workers=1,
+            upsert_workers=10
         )
 
     # Runs interactive command line search utility

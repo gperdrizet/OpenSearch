@@ -8,7 +8,9 @@ def run(
     index_name: str,
     output_destination: str,
     reader_instance,
-    parser_function
+    parser_function,
+    parse_workers,
+    upsert_workers
 ) -> None:
     
     '''Main function to parse and upsert dumps'''
@@ -36,7 +38,7 @@ def run(
     status.start()
 
     # Start parser jobs
-    for _ in range(1):
+    for _ in range(parse_workers):
 
         parse_process=Process(
             target=parser_function, 
@@ -48,7 +50,7 @@ def run(
     # Target the correct output function
 
     # Start writer jobs
-    for _ in range(10):
+    for _ in range(upsert_workers):
 
         # Save to file
         if output_destination == 'file':
