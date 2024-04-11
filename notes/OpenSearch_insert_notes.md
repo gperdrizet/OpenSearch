@@ -88,7 +88,7 @@ OK, done. It works, and it's fast and MUCH simpler than the XML parse/insert str
 
 ### Performance - CirrusSearch
 
-Added threading to the bulk insert function - this required the switch from inserting to upserting with a single create index call early in execution. Works great after some tinkering. Now we have to manually tune a few parameters to keep the queues flowing:
+Added threading to the bulk indexing function - this required a switch from creating to upserting records and the addition of single create index call early in execution, before the upsert threads start. Works great after some tinkering. Now we have to manually tune a few parameters to keep the queues flowing:
 
 1. Number of parser processes (current: 1)
 2. Number of upserter processes (current: 10)
@@ -100,11 +100,11 @@ Also, added another OpenSearch node and gave each 32 GB memory. Still running in
 opensearchpy.exceptions.ConnectionTimeout: ConnectionTimeout caused by - ReadTimeoutError(HTTPConnectionPool(host='localhost', port=9200): Read timed out. (read timeout=10))
 ```
 
-After ~2 min. of run time. Good news is it's way faster now - we are doing ~750 articles per second. Seems like CPU is limiting - using ~90% and ~100 GB system memory. Docker network sees RX/TX of 12/22 MiB/sec.
+After ~2 min. of run time. Good news is it's way faster now - we are doing ~750 articles per second, which is about 10x our XML rate. Seems like CPU is limiting - using ~90% and ~100 GB system memory. Docker network sees RX/TX of 12/22 MiB/sec.
 
 ### Performance - XML
 
-Same considerations, but the parser is slower so the optimal worker counts etc. are different - more parser threads and less upserter threads. Overall, XML parsing/indexing is less performant than CirrusSearch but that is probably because we are doing much more parsing/cleaning of the wikicode source, rather than just jamming the whole thing into OpenSearch like we do for CirrusSearch. Here are some numbers:
+Same considerations as above, but the parser is slower and indexing is faster so the optimal worker counts etc. are different - more parser threads and less upserter threads. Overall, XML parsing/indexing is less performant than CirrusSearch. We are doing much more parsing/cleaning of the wikicode source from the XML dumps, rather than just jamming the whole thing into OpenSearch like we do for CirrusSearch. If we should be doing the same cleaning with CirrusSearch remains to be decided. Here are some numbers:
 
 1. Number of parser processes (current: 12)
 2. Number of upserter processes (current: 7)
