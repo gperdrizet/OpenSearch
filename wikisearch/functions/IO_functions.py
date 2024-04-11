@@ -1,8 +1,55 @@
 import time
 import multiprocessing
+import argparse
 
 from xml import sax
 from opensearchpy import OpenSearch
+
+def make_arg_parser():
+
+    # Set-up command line argument parser
+    parser=argparse.ArgumentParser(
+        prog='wikisearch.py',
+        description='Run wikisearch tasks',
+        formatter_class=lambda prog: argparse.HelpFormatter(prog,max_help_position=80)
+    )
+
+    # Add argument for task to run
+    parser.add_argument(
+        'task',
+        choices=['update_xml_dump', 'process_xml_dump', 'process_cs_dump', 'test_search'],
+        help='Task to run'
+    )
+
+    # Add argument for parsed output destination
+    parser.add_argument(
+        '--output',
+        required=False,
+        choices=['file', 'opensearch'],
+        default='file',
+        help='Where to output parsed articles'
+    )
+
+    # Add argument to specify name of target 
+    # OpenSearch index for insert
+    parser.add_argument(
+        '--index',
+        required=False,
+        default=None,
+        help='Name of OpenSearch index for insert'
+    )
+
+    # Add argument to specify name of input dump file
+    parser.add_argument(
+        '--input',
+        required=False,
+        default=None,
+        help='Path to input dump file'
+    )
+
+    args=parser.parse_args()
+
+    return args
 
 def consume_xml_stream(input_stream, reader_instance) -> None:
 

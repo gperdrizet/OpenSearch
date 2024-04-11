@@ -1,5 +1,3 @@
-import argparse
-
 from bz2 import BZ2File
 from gzip import GzipFile
 
@@ -9,52 +7,13 @@ from wikisearch import test_search
 from wikisearch.classes.xml_reader import XMLReader
 from wikisearch.classes.cirrussearch_reader import CirrusSearchReader
 
-from wikisearch.functions.IO_functions import consume_xml_stream, consume_json_lines_stream
+from wikisearch.functions.IO_functions import make_arg_parser, consume_xml_stream, consume_json_lines_stream
 from wikisearch.functions.parsing_functions import parse_xml_article, parse_cirrussearch_article
 
 if __name__ == '__main__':
 
-    # Set-up command line argument parser
-    parser=argparse.ArgumentParser(
-        prog='wikisearch.py',
-        description='Run wikisearch tasks',
-        formatter_class=lambda prog: argparse.HelpFormatter(prog,max_help_position=80)
-    )
-
-    # Add argument for task to run
-    parser.add_argument(
-        'task',
-        choices=['update_xml_dump', 'process_xml_dump', 'process_cs_dump', 'test_search'],
-        help='Task to run'
-    )
-
-    # Add argument for parsed output destination
-    parser.add_argument(
-        '--output',
-        required=False,
-        choices=['file', 'opensearch'],
-        default='file',
-        help='Where to output parsed articles'
-    )
-
-    # Add argument to specify name of target 
-    # OpenSearch index for insert
-    parser.add_argument(
-        '--index',
-        required=False,
-        default=None,
-        help='Name of OpenSearch index for insert'
-    )
-
-    # Add argument to specify name of input dump file
-    parser.add_argument(
-        '--input',
-        required=False,
-        default=None,
-        help='Path to input dump file'
-    )
-
-    args=parser.parse_args()
+    # Set and parse command line args
+    args=make_arg_parser()
 
     # Decide what to do and how to do it based on
     # user provided arguments
