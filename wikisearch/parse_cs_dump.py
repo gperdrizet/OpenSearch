@@ -55,7 +55,7 @@ def run(
     # Target the correct output function
 
     # Start writer jobs
-    for _ in range(5):
+    for _ in range(10):
 
         # Save to file
         if output_destination == 'file':

@@ -26,7 +26,7 @@ def bulk_index_articles(
         incoming_articles.extend(output)
 
         # Once we have 500 articles, process them and index
-        if len(incoming_articles) / 2 == 50:
+        if len(incoming_articles) / 2 == 500:
 
             # Once we have all of the articles formatted and collected, insert them
             _=client.bulk(incoming_articles)
@@ -123,7 +123,8 @@ def start_client(index_name: str) -> OpenSearch:
     # Create the client with SSL/TLS and hostname verification disabled.
     client=OpenSearch(
         hosts=[{'host': host, 'port': port}],
-        http_compress=True, # enables gzip compression for request bodies
+        http_compress=False,
+        timeout=30,
         use_ssl=False,
         verify_certs=False,
         ssl_assert_hostname=False,
@@ -147,7 +148,7 @@ def initialize_index(index_name: str) -> None:
         index_body={
             'settings': {
                 'index': {
-                    'number_of_shards': 2 # Generic advice is 10-50 GB of data per shard
+                    'number_of_shards': 3 # Generic advice is 10-50 GB of data per shard
                 }
             }
         }

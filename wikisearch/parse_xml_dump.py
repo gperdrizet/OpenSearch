@@ -44,7 +44,7 @@ def run(
     status.start() 
 
     # Start parser jobs
-    for _ in range(12):
+    for _ in range(15):
 
         process=Process(
             target=parse_funcs.parse_xml_article, 
@@ -56,7 +56,7 @@ def run(
     # Target the correct output function
 
     # Start writer jobs
-    for _ in range(7):
+    for _ in range(1):
 
         # Save to file
         if output_destination == 'file':

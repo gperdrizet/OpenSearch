@@ -88,11 +88,20 @@ OK, done. It works, and it's fast and MUCH simpler than the XML parse/insert str
 
 ### Performance - CirrusSearch
 
-Added threading to the bulk indexing function - this required a switch from creating to upserting records and the addition of single create index call early in execution, before the upsert threads start. Works great after some tinkering. Now we have to manually tune a few parameters to keep the queues flowing:
+Added threading to the bulk indexing function - this required a switch from creating to upserting records and the addition of single create index call early in execution, before the upsert threads start. Works great after some tinkering.
+
+To upsert, our JSON lines object need to look like this:
+
+```text
+{'update': {'_id': 1751, '_index': 'enwiki-cs'}}
+{'doc': {'content_key: 'content_value'}, 'doc_as_upsert': True}
+```
+
+Now we have to manually tune a few parameters to keep the queues flowing:
 
 1. Number of parser processes (current: 1)
 2. Number of upserter processes (current: 10)
-3. Size of each bulk upsert (current: 50)
+3. Size of each bulk upsert (current: 500)
 
 Also, added another OpenSearch node and gave each 32 GB memory. Still running into some 'help, I'm swamped!' type errors. Will need to tinker a bit more to get a good insert speed that doesn't choke. Latest error is:
 
@@ -100,14 +109,16 @@ Also, added another OpenSearch node and gave each 32 GB memory. Still running in
 opensearchpy.exceptions.ConnectionTimeout: ConnectionTimeout caused by - ReadTimeoutError(HTTPConnectionPool(host='localhost', port=9200): Read timed out. (read timeout=10))
 ```
 
-After ~2 min. of run time. Good news is it's way faster now - we are doing ~750 articles per second, which is about 10x our XML rate. Seems like CPU is limiting - using ~90% and ~100 GB system memory. Docker network sees RX/TX of 12/22 MiB/sec.
+Adding *timeout=30* and turning gzip compression off in the client instantiation seems to have fixed it.
+
+Good news is it's way faster now - we are doing ~780 articles per second, which is about 10x our XML rate. Using ~90% of CPU and ~100 GB system memory. Network is seeing spikes of RX/TX 30/30 MiB/sec with a consistent load of 20/20 MiB/sec.
 
 ### Performance - XML
 
 Same considerations as above, but the parser is slower and indexing is faster so the optimal worker counts etc. are different - more parser threads and less upserter threads. Overall, XML parsing/indexing is less performant than CirrusSearch. We are doing much more parsing/cleaning of the wikicode source from the XML dumps, rather than just jamming the whole thing into OpenSearch like we do for CirrusSearch. If we should be doing the same cleaning with CirrusSearch remains to be decided. Here are some numbers:
 
-1. Number of parser processes (current: 12)
-2. Number of upserter processes (current: 7)
-3. Size of each bulk upsert (current: 50)
+1. Number of parser processes (current: 15)
+2. Number of upserter processes (current: 1)
+3. Size of each bulk upsert (current: 500)
 
-Gives an insert rate of ~65 articles per second, or on the order of 10x slower than CirrusSearch.
+Gives an insert rate of ~65 articles per second, or more than 10x slower than CirrusSearch.
