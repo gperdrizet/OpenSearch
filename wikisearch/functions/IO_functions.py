@@ -1,7 +1,20 @@
 import time
 import multiprocessing
+
+from xml import sax
 from opensearchpy import OpenSearch
-from wikisearch.classes.wikireader import WikiReader
+
+def consume_xml_stream(input_stream, reader_instance) -> None:
+
+    # Send the XML data stream to the reader via xml's sax parser
+    sax.parse(input_stream, reader_instance)
+
+def consume_json_lines_stream(input_stream, reader_instance) -> None:
+
+    # Send the XML data stream to the reader via xml's sax parser
+    for line in input_stream:
+
+        reader_instance.read_line(line)
 
 def bulk_index_articles(
     output_queue: multiprocessing.Queue,
@@ -11,7 +24,7 @@ def bulk_index_articles(
     parser output queue'''
 
     # Start the OpenSearch client and create the index
-    client=start_client(index_name)
+    client=start_client()
 
     # List to collect articles from queue until we have enough for a batch
     incoming_articles = []
@@ -100,7 +113,7 @@ def write_file(
 def display_status(
     input_queue: multiprocessing.Queue, 
     output_queue: multiprocessing.Queue, 
-    reader: WikiReader
+    reader
 ) -> None:
     
     '''Prints queue sizes every second'''
@@ -114,7 +127,7 @@ def display_status(
         print(f'Reader count: {reader.status_count}')
         time.sleep(1)
 
-def start_client(index_name: str) -> OpenSearch:
+def start_client() -> OpenSearch:
 
     # Set host and port
     host='localhost'
@@ -135,7 +148,7 @@ def start_client(index_name: str) -> OpenSearch:
 
 def initialize_index(index_name: str) -> None:
 
-    client=start_client(index_name)
+    client=start_client()
 
     # Delete the index we are trying to create if it exists
     if client.indices.exists(index=index_name):

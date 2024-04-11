@@ -1,14 +1,14 @@
 from xml.sax import ContentHandler
 
-class WikiReader(ContentHandler):
+class XMLReader(ContentHandler):
     '''Class to read tags parsed from bz2 data stream 
     via xml.sax's parser'''
     
-    def __init__(self, callback):
+    def __init__(self):
         super().__init__()
 
-        # Add parser queue callback function
-        self.callback=callback
+        # Add empty callback function
+        self.callback=None
         
         # Set some initial values
         self.read_stack=[]

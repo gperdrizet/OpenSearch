@@ -3,10 +3,10 @@ import json
 class CirrusSearchReader():
     '''Class to XML objects from CirrusSearch dump'''
     
-    def __init__(self, callback):
+    def __init__(self):
 
-        # Add parser queue callback function
-        self.callback=callback
+        # Add empty callback function
+        self.callback=None
 
         # Buffer to accumulate header and content before
         # sending to parser's input queue
