@@ -64,8 +64,7 @@ def consume_json_lines_stream(input_stream, reader_instance) -> None:
         reader_instance.read_line(line)
 
 def bulk_index_articles(
-    output_queue: multiprocessing.Queue,
-    index_name: str
+    output_queue: multiprocessing.Queue
 ) -> None:
     '''Batch index documents and insert in to OpenSearch from 
     parser output queue'''

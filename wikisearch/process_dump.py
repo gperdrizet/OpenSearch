@@ -65,7 +65,7 @@ def run(
 
             write_process=Process(
                 target=bulk_index_articles, 
-                args=(output_queue, index_name)
+                args=(output_queue,)
             )
 
         # Not sure what to do - warn user
