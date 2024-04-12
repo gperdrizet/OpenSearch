@@ -1,19 +1,23 @@
 '''Processes dump in XML or CirrusSearch format, indexes to OpenSearch
 or writes documents to file.'''
 
+from typing import Union, Callable
+from bz2 import BZ2File
+from gzip import GzipFile
 from threading import Thread
 from multiprocessing import Manager, Process
+from wikisearch.classes.cirrussearch_reader import CirrusSearchReader
 import wikisearch.functions.io_functions as io_funcs
 
 def run(
-    input_stream,
-    stream_reader,
+    input_stream: Union[GzipFile, BZ2File],
+    stream_reader: Callable,
     index_name: str,
     output_destination: str,
-    reader_instance,
-    parser_function,
-    parse_workers,
-    upsert_workers
+    reader_instance: CirrusSearchReader,
+    parser_function: Callable,
+    parse_workers: int,
+    upsert_workers: int
 ) -> None:
 
     '''Main function to parse and upsert dumps'''
@@ -32,22 +36,18 @@ def run(
     io_funcs.initialize_index(index_name)
 
     # Start the status monitor printout
-    status=Thread(
+    Thread(
         target=io_funcs.display_status,
         args=(input_queue, output_queue, reader_instance)
-    )
-
-    status.start()
+    ).start()
 
     # Start parser jobs
     for _ in range(parse_workers):
 
-        parse_process=Process(
+        Process(
             target=parser_function,
             args=(input_queue, output_queue, index_name)
-        )
-
-        parse_process.start()
+        ).start()
 
     # Target the correct output function
 

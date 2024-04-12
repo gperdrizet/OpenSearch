@@ -1,12 +1,14 @@
+'''Reader class for CirrusSearch JSON lines data.'''
+
 import json
 
 class CirrusSearchReader():
-    '''Class to XML objects from CirrusSearch dump'''
-    
+    '''Class to XML objects from CirrusSearch dump.'''
+
     def __init__(self):
 
         # Add empty callback function
-        self.callback=None
+        self.callback=self._callback_placeholder
 
         # Buffer to accumulate header and content before
         # sending to parser's input queue
@@ -15,8 +17,16 @@ class CirrusSearchReader():
         # Start article count
         self.status_count=0
 
+    def _callback_placeholder(self, _):
+        '''Placeholder for callback functions. Exists to allow 
+        instantiation of the reader before we know what callback
+        we are going to use.'''
+        return
+
     def read_line(self, line):
-        
+        '''Accumulates lines from JSON lines data until buffer
+        is full, then flushed buffer to parser input queue.'''
+
         # Convert line to dict
         line=json.loads(line)
 
@@ -29,8 +39,10 @@ class CirrusSearchReader():
             self.flush_buffer()
 
     def flush_buffer(self):
+        '''Sends contents of buffer, along with count of articles
+        read to input queue.'''
 
-        # Add the article number and put the buffer 
+        # Add the article number and put the buffer
         # contents into the parser input queue
         self.buffer.append(self.status_count)
         self.callback(self.buffer)
@@ -40,3 +52,4 @@ class CirrusSearchReader():
 
         # Update article count
         self.status_count += 1
+        

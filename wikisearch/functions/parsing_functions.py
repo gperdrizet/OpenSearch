@@ -1,12 +1,16 @@
+'''Functions to parse data read from dumps and related helper functions'''
+
 import multiprocessing
 import mwparserfromhell # type: ignore
 
 def parse_cirrussearch_article(
-    input_queue: multiprocessing.Queue, 
+    input_queue: multiprocessing.Queue,
     output_queue: multiprocessing.Queue,
     index_name: str
 ) -> None:
-    
+
+    '''Parses JSON lines data read from a CirrusSearch dump.'''
+
     while True:
 
         # Get the header and the content source from the article queue
@@ -28,7 +32,7 @@ def update_cs_index(
     index_name: str,
     id_num: int
 ) -> dict:
-    
+
     '''Make some changes to index lines from CirrusSearch
     dump to make it compatible with OpenSearch'''
 
@@ -47,13 +51,15 @@ def update_cs_index(
     return line
 
 def parse_xml_article(
-    input_queue: multiprocessing.Queue, 
+    input_queue: multiprocessing.Queue,
     output_queue: multiprocessing.Queue,
     index_name: str
 ) -> None:
-    
+
+    '''Parses Wikicode page source recovered from XML dump.'''
+
     while True:
-    
+
         # Get the page title and the content source from the article queue
         page_title, source, article_num=input_queue.get()
 
@@ -62,8 +68,8 @@ def parse_xml_article(
 
         # Strip garbage out of wikicode source
         source_string=wikicode.strip_code(
-            normalize=True, 
-            collapse=True, 
+            normalize=True,
+            collapse=True,
             keep_template_params=False
         )
 
@@ -83,10 +89,22 @@ def parse_xml_article(
             # Get rid of image thumbnail lines and leading spaces
             source_string=remove_thumbnails(source_string)
 
-            # Create formatted dicts for the request and the 
+            # Create formatted dicts for the request and the
             # content to send to open search
-            request_header={'update': {'_index': index_name, '_id': article_num}}
-            formatted_article={'doc': {'title': page_title, 'text': source_string}, 'doc_as_upsert': 'true'}
+            request_header={
+                'update': {
+                    '_index': index_name, 
+                    '_id': article_num
+                }
+            }
+
+            formatted_article={
+                'doc': {
+                    'title': page_title, 
+                    'text': source_string
+                },
+                'doc_as_upsert': 'true'
+            }
 
             # Put the result into the output queue
             output_queue.put((request_header, formatted_article))
@@ -135,7 +153,7 @@ def fix_bad_symbols(source_string: str) -> str:
 
 def clean_newlines(source_string: str) -> str:
     '''Fixes up some issues with multiple newlines'''
-            
+
     source_string=source_string.replace(' \n', '\n')
     source_string=source_string.replace('\n\n\n\n\n\n', '\n\n')
     source_string=source_string.replace('\n\n\n\n\n', '\n\n')
@@ -171,10 +189,10 @@ def remove_thumbnails(source_string: str) -> str:
 
         elif 'style="' in line:
             pass
-        
+
         # If we don't find any of the above, process the line
         else:
-            
+
             # Check for lines that are not blank but start with space
             # or other garbage
             if len(line) > 1:
@@ -208,7 +226,7 @@ def remove_thumbnails(source_string: str) -> str:
 def remove_extra_sections(source_string: str) -> str:
     '''Remove extra sections from the end of the document by splitting 
     on common headings only keeping the stuff before the split point'''
-    
+
     source_string=source_string.split('See also')[0]
     source_string=source_string.split('References')[0]
     source_string=source_string.split('External links')[0]

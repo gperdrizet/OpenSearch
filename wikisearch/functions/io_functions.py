@@ -4,11 +4,15 @@ and related helper functions.'''
 import time
 import multiprocessing
 import argparse
+from typing import Callable
+from bz2 import BZ2File
+from gzip import GzipFile
 from xml import sax
 from opensearchpy import OpenSearch
 from wikisearch import config
+from wikisearch.classes.cirrussearch_reader import CirrusSearchReader
 
-def make_arg_parser():
+def make_arg_parser() -> argparse.Namespace:
     '''Instantiates the command line argument parser
     Adds and parses arguments, returns parsed arguments.'''
 
@@ -79,13 +83,21 @@ def make_arg_parser():
 
     return args
 
-def consume_xml_stream(input_stream, reader_instance) -> None:
+def consume_xml_stream(
+    input_stream: BZ2File,
+    reader_instance: Callable
+) -> None:
+
     '''Takes input data stream from file passes it to
     the reader via xml's sax parser.'''
 
     sax.parse(input_stream, reader_instance)
 
-def consume_json_lines_stream(input_stream, reader_instance) -> None:
+def consume_json_lines_stream(
+    input_stream: GzipFile,
+    reader_instance: Callable
+) -> None:
+
     '''Takes input stream containing json lines data, passes it
     line by line to reader class instance'''
 
@@ -194,7 +206,7 @@ def write_file(
 def display_status(
     input_queue: multiprocessing.Queue,
     output_queue: multiprocessing.Queue,
-    reader
+    reader_instance: CirrusSearchReader,
 ) -> None:
 
     '''Prints queue sizes and articles read every second'''
@@ -205,7 +217,7 @@ def display_status(
         print('\033[F\033[F\033[F', end='')
         print(f'Input queue size: {input_queue.qsize()}')
         print(f'Output queue size: {output_queue.qsize()}')
-        print(f'Reader count: {reader.status_count}')
+        print(f'Reader count: {reader_instance.status_count}')
         time.sleep(1)
 
 def start_client() -> OpenSearch:

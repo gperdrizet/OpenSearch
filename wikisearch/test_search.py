@@ -1,3 +1,5 @@
+'''Simple command line utility to test OpenSearch index.'''
+
 from opensearchpy import OpenSearch
 
 def run() -> None:
@@ -18,9 +20,9 @@ def run() -> None:
 
     # Loop forever
     while True:
-        
+
         # Get query from user
-        q=input("Search query: ") 
+        q=input("Search query: ")
 
         # Construct OpenSearch query
         query={
@@ -41,3 +43,4 @@ def run() -> None:
 
         # Print the result
         print(response)
+        
