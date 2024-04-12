@@ -1,11 +1,16 @@
+'''Contains various functions for handling input.output of data
+and related helper functions.'''
+
 import time
 import multiprocessing
 import argparse
-
 from xml import sax
 from opensearchpy import OpenSearch
+from wikisearch import config
 
 def make_arg_parser():
+    '''Instantiates the command line argument parser
+    Adds and parses arguments, returns parsed arguments.'''
 
     # Set-up command line argument parser
     parser=argparse.ArgumentParser(
@@ -30,8 +35,7 @@ def make_arg_parser():
         help='Where to output parsed articles'
     )
 
-    # Add argument to specify name of target 
-    # OpenSearch index for insert
+    # Add argument to specify name of target OpenSearch index for insert
     parser.add_argument(
         '--index',
         required=False,
@@ -39,12 +43,36 @@ def make_arg_parser():
         help='Name of OpenSearch index for insert'
     )
 
-    # Add argument to specify name of input dump file
+    # Add argument to specify name of input xml dump file
     parser.add_argument(
-        '--input',
+        '--xml_input',
         required=False,
-        default=None,
-        help='Path to input dump file'
+        default=config.XML_INPUT_FILE,
+        help='Path to input XML dump file'
+    )
+
+    # Add argument to specify name of input cs dump file
+    parser.add_argument(
+        '--cs_input',
+        required=False,
+        default=config.CS_INPUT_FILE,
+        help='Path to input CirrusSearch dump file'
+    )
+
+    # Add argument to specify name of OpenSearch index for XML dumps
+    parser.add_argument(
+        '--xml_index',
+        required=False,
+        default=config.XML_INDEX,
+        help='Name of target OpenSearch index for XML dumps'
+    )
+
+    # Add argument to specify name of OpenSearch index for CS dumps
+    parser.add_argument(
+        '--cs_index',
+        required=False,
+        default=config.CS_INDEX,
+        help='Name of target OpenSearch index for CirrusSearch dumps'
     )
 
     args=parser.parse_args()
@@ -52,13 +80,16 @@ def make_arg_parser():
     return args
 
 def consume_xml_stream(input_stream, reader_instance) -> None:
+    '''Takes input data stream from file passes it to
+    the reader via xml's sax parser.'''
 
-    # Send the XML data stream to the reader via xml's sax parser
     sax.parse(input_stream, reader_instance)
 
 def consume_json_lines_stream(input_stream, reader_instance) -> None:
+    '''Takes input stream containing json lines data, passes it
+    line by line to reader class instance'''
 
-    # Send the XML data stream to the reader via xml's sax parser
+    # Loop on lines
     for line in input_stream:
 
         reader_instance.read_line(line)
@@ -98,14 +129,14 @@ def index_articles(
     output_queue: multiprocessing.Queue,
     index_name: str
 ) -> None:
-    
+
     '''Indexes articles one at a time from output queue into OpenSearch'''
 
     # Start the OpenSearch client and create the index
-    client=start_client(index_name)
+    client=start_client()
 
     # Counter var for document id
-    id=0
+    document_id=0
 
     # Loop forever
     while True:
@@ -125,16 +156,17 @@ def index_articles(
         _=client.index(
             index=index_name,
             body=document,
-            id=id,
-            refresh=True
+            id=document_id
         )
 
-        id+=1
+        document_id+=1
 
 def write_file(
     output_queue: multiprocessing.Queue,
     article_source: str
 ) -> None:
+
+    '''Takes documents from parser's output queue, writes to file.'''
 
     # Loop forever
     while True:
@@ -151,18 +183,21 @@ def write_file(
         file_name=title.replace(' ', '_')
         file_name=file_name.replace('/', '-')
 
+        # Construct output path
+        output = f'wikisearch/data/articles/{article_source}/{file_name}'
+
         # Save article to a file
-        with open(f"wikisearch/data/articles/{article_source}/{file_name}", 'w') as text_file:
+        with open(output, 'w', encoding="utf-8") as text_file:
             text_file.write(f'{title}\n{content}')
 
 
 def display_status(
-    input_queue: multiprocessing.Queue, 
-    output_queue: multiprocessing.Queue, 
+    input_queue: multiprocessing.Queue,
+    output_queue: multiprocessing.Queue,
     reader
 ) -> None:
-    
-    '''Prints queue sizes every second'''
+
+    '''Prints queue sizes and articles read every second'''
 
     print('\n\n\n')
 
@@ -174,6 +209,8 @@ def display_status(
         time.sleep(1)
 
 def start_client() -> OpenSearch:
+
+    '''Fires up the OpenSearch client'''
 
     # Set host and port
     host='localhost'
@@ -194,6 +231,9 @@ def start_client() -> OpenSearch:
 
 def initialize_index(index_name: str) -> None:
 
+    '''Set-up OpenSearch index. Deletes index if it already exists
+    at run start. Creates new index for run.'''
+
     client=start_client()
 
     # Delete the index we are trying to create if it exists
@@ -201,7 +241,7 @@ def initialize_index(index_name: str) -> None:
         _=client.indices.delete(index=index_name)
 
     # Create the target index if it does not exist
-    if client.indices.exists(index=index_name) == False:
+    if client.indices.exists(index=index_name) is False:
 
         # Create index
         index_body={

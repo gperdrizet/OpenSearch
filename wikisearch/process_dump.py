@@ -1,6 +1,9 @@
+'''Processes dump in XML or CirrusSearch format, indexes to OpenSearch
+or writes documents to file.'''
+
 from threading import Thread
 from multiprocessing import Manager, Process
-from wikisearch.functions.IO_functions import initialize_index, display_status, write_file, bulk_index_articles
+import wikisearch.functions.io_functions as io_funcs
 
 def run(
     input_stream,
@@ -12,7 +15,7 @@ def run(
     parse_workers,
     upsert_workers
 ) -> None:
-    
+
     '''Main function to parse and upsert dumps'''
 
     # Start multiprocessing manager
@@ -22,16 +25,15 @@ def run(
     output_queue=manager.Queue(maxsize=2000)
     input_queue=manager.Queue(maxsize=2000)
 
-    # Add the input queue's put function to the reader class's 
-    # callback method
+    # Add the input queue's put function to the reader class's callback method
     reader_instance.callback=input_queue.put
 
     # Initialize the target index
-    initialize_index(index_name)
+    io_funcs.initialize_index(index_name)
 
     # Start the status monitor printout
     status=Thread(
-        target=display_status, 
+        target=io_funcs.display_status,
         args=(input_queue, output_queue, reader_instance)
     )
 
@@ -41,7 +43,7 @@ def run(
     for _ in range(parse_workers):
 
         parse_process=Process(
-            target=parser_function, 
+            target=parser_function,
             args=(input_queue, output_queue, index_name)
         )
 
@@ -56,7 +58,7 @@ def run(
         if output_destination == 'file':
 
             write_process=Process(
-                target=write_file, 
+                target=io_funcs.write_file,
                 args=(output_queue, 'cirrus_search')
             )
 
@@ -64,7 +66,7 @@ def run(
         elif output_destination == 'opensearch':
 
             write_process=Process(
-                target=bulk_index_articles, 
+                target=io_funcs.bulk_index_articles,
                 args=(output_queue,)
             )
 
