@@ -122,3 +122,74 @@ Same considerations as above, but the parser is slower and indexing is faster so
 3. Size of each bulk upsert (current: 500)
 
 Gives an insert rate of ~65 articles per second, or more than 10x slower than CirrusSearch.
+
+### Error handling
+
+Still sporadically seeing a few sporadic connection errors. We need to have some handling in place for this, especially if we expect this to be run by other people and on other machines. Can't expect folks to hand tune the insert batch size and numbers of workers. Here is the stack trace:
+
+```text
+Process Process-6:
+Traceback (most recent call last):
+  File "/mnt/arkk/enwiki-opensearch/.venv/lib/python3.8/site-packages/urllib3/connectionpool.py", line 467, in _m
+ake_request
+    six.raise_from(e, None)
+  File "<string>", line 3, in raise_from
+  File "/mnt/arkk/enwiki-opensearch/.venv/lib/python3.8/site-packages/urllib3/connectionpool.py", line 462, in _m
+ake_request
+    httplib_response = conn.getresponse()
+  File "/usr/lib/python3.8/http/client.py", line 1348, in getresponse
+    response.begin()
+  File "/usr/lib/python3.8/http/client.py", line 316, in begin
+    version, status, reason = self._read_status()
+  File "/usr/lib/python3.8/http/client.py", line 277, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "/usr/lib/python3.8/socket.py", line 669, in readinto
+    return self._sock.recv_into(b)
+socket.timeout: timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/mnt/arkk/enwiki-opensearch/.venv/lib/python3.8/site-packages/opensearchpy/connection/http_urllib3.py", l
+ine 271, in perform_request
+    response = self.pool.urlopen(
+  File "/mnt/arkk/enwiki-opensearch/.venv/lib/python3.8/site-packages/urllib3/connectionpool.py", line 799, in ur
+lopen
+    retries = retries.increment(
+  File "/mnt/arkk/enwiki-opensearch/.venv/lib/python3.8/site-packages/urllib3/util/retry.py", line 525, in increm
+ent
+    raise six.reraise(type(error), error, _stacktrace)
+  File "/mnt/arkk/enwiki-opensearch/.venv/lib/python3.8/site-packages/urllib3/packages/six.py", line 770, in rera
+ise
+    raise value
+  File "/mnt/arkk/enwiki-opensearch/.venv/lib/python3.8/site-packages/urllib3/connectionpool.py", line 715, in ur
+lopen
+    httplib_response = self._make_request(
+  File "/mnt/arkk/enwiki-opensearch/.venv/lib/python3.8/site-packages/urllib3/connectionpool.py", line 469, in _m
+ake_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+  File "/mnt/arkk/enwiki-opensearch/.venv/lib/python3.8/site-packages/urllib3/connectionpool.py", line 358, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPConnectionPool(host='localhost', port=9200): Read timed out. (read timeout=30)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/multiprocessing/process.py", line 315, in _bootstrap
+    self.run()
+  File "/usr/lib/python3.8/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/mnt/arkk/enwiki-opensearch/wikisearch/functions/io_functions.py", line 134, in bulk_index_articles
+    _=client.bulk(incoming_articles)
+  File "/mnt/arkk/enwiki-opensearch/.venv/lib/python3.8/site-packages/opensearchpy/client/utils.py", line 180, in _wrapped
+    return func(*args, params=params, headers=headers, **kwargs)
+  File "/mnt/arkk/enwiki-opensearch/.venv/lib/python3.8/site-packages/opensearchpy/client/__init__.py", line 460, in bulk
+    return self.transport.perform_request(
+  File "/mnt/arkk/enwiki-opensearch/.venv/lib/python3.8/site-packages/opensearchpy/transport.py", line 447, in perform_request
+    raise e
+  File "/mnt/arkk/enwiki-opensearch/.venv/lib/python3.8/site-packages/opensearchpy/transport.py", line 408, in perform_request
+    status, headers_response, data = connection.perform_request(
+  File "/mnt/arkk/enwiki-opensearch/.venv/lib/python3.8/site-packages/opensearchpy/connection/http_urllib3.py", line 285, in perform_request
+    raise ConnectionTimeout("TIMEOUT", str(e), e)
+opensearchpy.exceptions.ConnectionTimeout: ConnectionTimeout caused by - ReadTimeoutError(HTTPConnectionPool(host='localhost', port=9200): Read timed out. (read timeout=30))
+```

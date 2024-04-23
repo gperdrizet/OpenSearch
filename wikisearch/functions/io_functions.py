@@ -8,7 +8,7 @@ from typing import Callable
 from bz2 import BZ2File
 from gzip import GzipFile
 from xml import sax
-from opensearchpy import OpenSearch
+from opensearchpy import OpenSearch, exceptions
 from wikisearch import config
 from wikisearch.classes.cirrussearch_reader import CirrusSearchReader
 
@@ -131,10 +131,20 @@ def bulk_index_articles(
         if len(incoming_articles) / 2 == 500:
 
             # Once we have all of the articles formatted and collected, insert them
-            _=client.bulk(incoming_articles)
+            # catching any connection timeout errors from OpenSearch
+            try:
 
-            # Empty the list of articles to collect the next batch
-            incoming_articles = []
+                # Do the insert
+                _=client.bulk(incoming_articles)
+
+                # Empty the list of articles to collect the next batch
+                incoming_articles = []
+
+            # If we catch an connection timeout, sleep for a bit and
+            # don't clear the cached articles before continuing the loop
+            except exceptions.ConnectionTimeout:
+
+                time.sleep(10)
 
 
 def index_articles(
