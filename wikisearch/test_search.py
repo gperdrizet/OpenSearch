@@ -38,7 +38,7 @@ def run() -> None:
         # Do the search
         response=client.search(
             body=query,
-            index='enwiki'
+            index='enwiki-cs'
         )
 
         # Print the result
