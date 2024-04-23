@@ -9,6 +9,7 @@ from wikisearch import test_search
 from wikisearch.classes.xml_reader import XMLReader
 from wikisearch.classes.cirrussearch_reader import CirrusSearchReader
 
+import wikisearch.config as conf
 import wikisearch.functions.io_functions as io_funcs
 import wikisearch.functions.parsing_functions as parse_funcs
 
@@ -33,8 +34,8 @@ if __name__ == '__main__':
             output_destination=args.output,
             reader_instance=XMLReader(),
             parser_function=parse_funcs.parse_xml_article,
-            parse_workers=15,
-            upsert_workers=1
+            parse_workers=conf.XML_PARSE_WORKERS,
+            upsert_workers=conf.XML_OUTPUT_WORKERS
         )
 
     # Bulk inserts a CirrusSearch index directly
@@ -49,8 +50,8 @@ if __name__ == '__main__':
             output_destination=args.output,
             reader_instance=CirrusSearchReader(),
             parser_function=parse_funcs.parse_cirrussearch_article,
-            parse_workers=1,
-            upsert_workers=10
+            parse_workers=conf.CS_PARSE_WORKERS,
+            upsert_workers=conf.CS_OUTPUT_WORKERS
         )
 
     # Runs interactive command line search utility
