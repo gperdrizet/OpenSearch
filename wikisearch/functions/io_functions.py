@@ -107,7 +107,8 @@ def consume_json_lines_stream(
         reader_instance.read_line(line)
 
 def bulk_index_articles(
-    output_queue: multiprocessing.Queue
+    output_queue: multiprocessing.Queue,
+    batch_size: int
 ) -> None:
     '''Batch index documents and insert in to OpenSearch from 
     parser output queue'''
@@ -128,7 +129,7 @@ def bulk_index_articles(
         incoming_articles.extend(output)
 
         # Once we have 500 articles, process them and index
-        if len(incoming_articles) / 2 == 500:
+        if len(incoming_articles) / 2 >= batch_size:
 
             # Once we have all of the articles formatted and collected, insert them
             # catching any connection timeout errors from OpenSearch

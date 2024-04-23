@@ -9,10 +9,10 @@ CS_PARSE_WORKERS=1
 # Number of workers to start for outputting parsed
 # documents to file or OpenSearch index
 XML_OUTPUT_WORKERS=1
-CS_OUTPUT_WORKERS=8
+CS_OUTPUT_WORKERS=4
 
 # Number of documents to index via bulk call to OpenSearch
-BULK_BATCH_SIZE=500
+BULK_BATCH_SIZE=100
 
 # Dump data files
 XML_INPUT_FILE='wikisearch/data/enwiki-20240320-pages-articles-multistream.xml.bz2'

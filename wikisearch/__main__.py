@@ -35,7 +35,8 @@ if __name__ == '__main__':
             reader_instance=XMLReader(),
             parser_function=parse_funcs.parse_xml_article,
             parse_workers=conf.XML_PARSE_WORKERS,
-            upsert_workers=conf.XML_OUTPUT_WORKERS
+            upsert_workers=conf.XML_OUTPUT_WORKERS,
+            upsert_batch_size=conf.BULK_BATCH_SIZE
         )
 
     # Bulk inserts a CirrusSearch index directly
@@ -51,7 +52,8 @@ if __name__ == '__main__':
             reader_instance=CirrusSearchReader(),
             parser_function=parse_funcs.parse_cirrussearch_article,
             parse_workers=conf.CS_PARSE_WORKERS,
-            upsert_workers=conf.CS_OUTPUT_WORKERS
+            upsert_workers=conf.CS_OUTPUT_WORKERS,
+            upsert_batch_size=conf.BULK_BATCH_SIZE
         )
 
     # Runs interactive command line search utility

@@ -17,7 +17,8 @@ def run(
     reader_instance: CirrusSearchReader,
     parser_function: Callable,
     parse_workers: int,
-    upsert_workers: int
+    upsert_workers: int,
+    upsert_batch_size: int
 ) -> None:
 
     '''Main function to parse and upsert dumps'''
@@ -67,7 +68,7 @@ def run(
 
             write_process=Process(
                 target=io_funcs.bulk_index_articles,
-                args=(output_queue,)
+                args=(output_queue,upsert_batch_size)
             )
 
         # Not sure what to do - warn user
