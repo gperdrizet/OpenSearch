@@ -2,7 +2,7 @@
 
 from opensearchpy import OpenSearch
 
-def run() -> None:
+def run(test_search_index: str) -> None:
     '''Simple command line utility to try out searching'''
 
     host='localhost'
@@ -38,7 +38,7 @@ def run() -> None:
         # Do the search
         response=client.search(
             body=query,
-            index='enwiki-cs'
+            index=test_search_index
         )
 
         # Print the result

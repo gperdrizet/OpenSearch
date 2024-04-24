@@ -21,3 +21,6 @@ CS_INPUT_FILE='wikisearch/data/enwiki-20240401-cirrussearch-content.json.gz'
 # OpenSearch index names
 XML_INDEX='enwiki-xml'
 CS_INDEX='enwiki-cs'
+
+# Index to use for search test
+TEST_SEARCH_INDEX='enwiki-xml'

@@ -79,6 +79,14 @@ def make_arg_parser() -> argparse.Namespace:
         help='Name of target OpenSearch index for CirrusSearch dumps'
     )
 
+    # Add argument to specify name of index for test search
+    parser.add_argument(
+        '--test_search_index',
+        required=False,
+        default=config.TEST_SEARCH_INDEX,
+        help='Name of index for search test'
+    )
+
     args=parser.parse_args()
 
     return args

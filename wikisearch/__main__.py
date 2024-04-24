@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
     # Runs interactive command line search utility
     elif args.task == 'test_search':
-        test_search.run()
+        test_search.run(args.test_search_index)
 
     # Planned - gets new xml dump
     elif args.task == 'update_xml_dump':
