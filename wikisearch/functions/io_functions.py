@@ -27,7 +27,8 @@ def make_arg_parser() -> argparse.Namespace:
     parser.add_argument(
         'task',
         choices=['update_xml_dump', 'process_xml_dump', 'process_cs_dump', 'test_search'],
-        help='Task to run'
+        help='[update_xml_dump, process_xml_dump, process_cs_dump, test_search]',
+        metavar='TASK_NAME_STRING'
     )
 
     # Add argument for parsed output destination
@@ -36,7 +37,8 @@ def make_arg_parser() -> argparse.Namespace:
         required=False,
         choices=['file', 'opensearch'],
         default='file',
-        help='Where to output parsed articles'
+        help='where to output parsed articles: [file, opensearch]',
+        metavar=''
     )
 
     # Add argument to specify name of target OpenSearch index for insert
@@ -44,7 +46,8 @@ def make_arg_parser() -> argparse.Namespace:
         '--index',
         required=False,
         default=None,
-        help='Name of OpenSearch index for insert'
+        help='name of OpenSearch index for insert',
+        metavar=''
     )
 
     # Add argument to specify name of input xml dump file
@@ -52,7 +55,8 @@ def make_arg_parser() -> argparse.Namespace:
         '--xml_input',
         required=False,
         default=config.XML_INPUT_FILE,
-        help='Path to input XML dump file'
+        help='path to input XML dump file',
+        metavar=''
     )
 
     # Add argument to specify name of input cs dump file
@@ -60,7 +64,8 @@ def make_arg_parser() -> argparse.Namespace:
         '--cs_input',
         required=False,
         default=config.CS_INPUT_FILE,
-        help='Path to input CirrusSearch dump file'
+        help='path to input CirrusSearch dump file',
+        metavar=''
     )
 
     # Add argument to specify name of OpenSearch index for XML dumps
@@ -68,7 +73,8 @@ def make_arg_parser() -> argparse.Namespace:
         '--xml_index',
         required=False,
         default=config.XML_INDEX,
-        help='Name of target OpenSearch index for XML dumps'
+        help='name of target OpenSearch index for XML dumps',
+        metavar=''
     )
 
     # Add argument to specify name of OpenSearch index for CS dumps
@@ -76,7 +82,8 @@ def make_arg_parser() -> argparse.Namespace:
         '--cs_index',
         required=False,
         default=config.CS_INDEX,
-        help='Name of target OpenSearch index for CirrusSearch dumps'
+        help='name of target OpenSearch index for CirrusSearch dumps',
+        metavar=''
     )
 
     # Add argument to specify name of index for test search
@@ -84,7 +91,8 @@ def make_arg_parser() -> argparse.Namespace:
         '--test_search_index',
         required=False,
         default=config.TEST_SEARCH_INDEX,
-        help='Name of index for search test'
+        help='name of index for search test',
+        metavar=''
     )
 
     args=parser.parse_args()
