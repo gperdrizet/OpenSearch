@@ -42,11 +42,12 @@ def make_arg_parser() -> argparse.Namespace:
     )
 
     # Add argument to specify name of target OpenSearch index for insert
+    # or testing search
     parser.add_argument(
         '--index',
         required=False,
         default=None,
-        help='name of OpenSearch index for insert',
+        help='name of OpenSearch index for insert or search test',
         metavar=''
     )
 
@@ -83,15 +84,6 @@ def make_arg_parser() -> argparse.Namespace:
         required=False,
         default=config.CS_INDEX,
         help='name of target OpenSearch index for CirrusSearch dumps',
-        metavar=''
-    )
-
-    # Add argument to specify name of index for test search
-    parser.add_argument(
-        '--test_search_index',
-        required=False,
-        default=config.TEST_SEARCH_INDEX,
-        help='name of index for search test',
         metavar=''
     )
 
