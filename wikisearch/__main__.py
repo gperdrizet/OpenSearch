@@ -9,14 +9,13 @@ from wikisearch import test_search
 from wikisearch.classes.xml_reader import XMLReader
 from wikisearch.classes.cirrussearch_reader import CirrusSearchReader
 
-import wikisearch.config as conf
 import wikisearch.functions.io_functions as io_funcs
 import wikisearch.functions.parsing_functions as parse_funcs
 
 if __name__ == '__main__':
 
     # Set and parse command line args
-    args=io_funcs.make_arg_parser()
+    args=io_funcs.get_arguments()
 
     # Decide what to do and how to do it based on
     # user provided arguments
@@ -28,15 +27,11 @@ if __name__ == '__main__':
 
         # Start the run
         process_dump.run(
-            input_stream=BZ2File(args.input),
+            input_stream=BZ2File(args.dump),
             stream_reader=io_funcs.consume_xml_stream,
-            index_name=args.index,
-            output_destination=args.output,
             reader_instance=XMLReader(),
             parser_function=parse_funcs.parse_xml_article,
-            parse_workers=args.parse_workers,
-            upsert_workers=args.output_workers,
-            upsert_batch_size=args.upsert_batch
+            args=args
         )
 
     # Bulk inserts a CirrusSearch index directly
@@ -45,15 +40,11 @@ if __name__ == '__main__':
 
         # Start the run
         process_dump.run(
-            input_stream=GzipFile(args.input),
+            input_stream=GzipFile(args.dump),
             stream_reader=io_funcs.consume_json_lines_stream,
-            index_name=args.index,
-            output_destination=args.output,
             reader_instance=CirrusSearchReader(),
             parser_function=parse_funcs.parse_cirrussearch_article,
-            parse_workers=args.parse_workers,
-            upsert_workers=args.output_workers,
-            upsert_batch_size=args.upsert_batch
+            args=args
         )
 
     # Runs interactive command line search utility

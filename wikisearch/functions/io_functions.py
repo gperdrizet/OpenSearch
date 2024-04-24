@@ -1,18 +1,16 @@
 '''Contains various functions for handling input.output of data
 and related helper functions.'''
 
+from __future__ import annotations
 import time
-import multiprocessing
 import argparse
 from typing import Callable
-from bz2 import BZ2File
-from gzip import GzipFile
 from xml import sax
-from opensearchpy import OpenSearch, exceptions
+from opensearchpy import exceptions
 from wikisearch import config
-from wikisearch.classes.cirrussearch_reader import CirrusSearchReader
+import wikisearch.functions.helper_functions as helper_funcs
 
-def make_arg_parser() -> argparse.Namespace:
+def get_arguments() -> argparse.Namespace:
     '''Instantiates the command line argument parser
     Adds and parses arguments, returns parsed arguments.'''
 
@@ -53,8 +51,8 @@ def make_arg_parser() -> argparse.Namespace:
         metavar=''
     )
 
-    # Add argument to specify number of parse workers, set default value 
-    # to None so we can add a sane default after we parse the arguments 
+    # Add argument to specify number of parse workers, set default value
+    # to None so we can add a sane default after we parse the arguments
     # know the task we are running
     parser.add_argument(
         '--parse_workers',
@@ -130,7 +128,7 @@ def make_arg_parser() -> argparse.Namespace:
     return args
 
 def consume_xml_stream(
-    input_stream: BZ2File,
+    input_stream: BZ2File, # type: ignore
     reader_instance: Callable
 ) -> None:
 
@@ -140,7 +138,7 @@ def consume_xml_stream(
     sax.parse(input_stream, reader_instance)
 
 def consume_json_lines_stream(
-    input_stream: GzipFile,
+    input_stream: GzipFile, # type: ignore
     reader_instance: Callable
 ) -> None:
 
@@ -153,14 +151,14 @@ def consume_json_lines_stream(
         reader_instance.read_line(line)
 
 def bulk_index_articles(
-    output_queue: multiprocessing.Queue,
+    output_queue: multiprocessing.Queue, # type: ignore
     batch_size: int
 ) -> None:
     '''Batch index documents and insert in to OpenSearch from 
     parser output queue'''
 
     # Start the OpenSearch client and create the index
-    client=start_client()
+    client=helper_funcs.start_client()
 
     # List to collect articles from queue until we have enough for a batch
     incoming_articles = []
@@ -193,45 +191,8 @@ def bulk_index_articles(
 
                 time.sleep(10)
 
-
-def index_articles(
-    output_queue: multiprocessing.Queue,
-    index_name: str
-) -> None:
-
-    '''Indexes articles one at a time from output queue into OpenSearch'''
-
-    # Start the OpenSearch client and create the index
-    client=start_client()
-
-    # Counter var for document id
-    document_id=0
-
-    # Loop forever
-    while True:
-
-        # Get article from queue
-        output=output_queue.get()
-
-        # Extract filename and text
-        page_title=output[0]
-        text=output[1]
-
-        document={
-            'title': page_title,
-            'text': text
-        }
-
-        _=client.index(
-            index=index_name,
-            body=document,
-            id=document_id
-        )
-
-        document_id+=1
-
 def write_file(
-    output_queue: multiprocessing.Queue,
+    output_queue: multiprocessing.Queue, # type: ignore
     article_source: str
 ) -> None:
 
@@ -258,70 +219,3 @@ def write_file(
         # Save article to a file
         with open(output, 'w', encoding="utf-8") as text_file:
             text_file.write(f'{title}\n{content}')
-
-
-def display_status(
-    input_queue: multiprocessing.Queue,
-    output_queue: multiprocessing.Queue,
-    reader_instance: CirrusSearchReader,
-) -> None:
-
-    '''Prints queue sizes and articles read every second'''
-
-    print('\n\n\n')
-
-    while True:
-        print('\033[F\033[F\033[F', end='')
-        print(f'Input queue size: {input_queue.qsize()}')
-        print(f'Output queue size: {output_queue.qsize()}')
-        print(f'Reader count: {reader_instance.status_count}')
-        time.sleep(1)
-
-def start_client() -> OpenSearch:
-
-    '''Fires up the OpenSearch client'''
-
-    # Set host and port
-    host='localhost'
-    port=9200
-
-    # Create the client with SSL/TLS and hostname verification disabled.
-    client=OpenSearch(
-        hosts=[{'host': host, 'port': port}],
-        http_compress=False,
-        timeout=30,
-        use_ssl=False,
-        verify_certs=False,
-        ssl_assert_hostname=False,
-        ssl_show_warn=False
-    )
-
-    return client
-
-def initialize_index(index_name: str) -> None:
-
-    '''Set-up OpenSearch index. Deletes index if it already exists
-    at run start. Creates new index for run.'''
-
-    client=start_client()
-
-    # Delete the index we are trying to create if it exists
-    if client.indices.exists(index=index_name):
-        _=client.indices.delete(index=index_name)
-
-    # Create the target index if it does not exist
-    if client.indices.exists(index=index_name) is False:
-
-        # Create index
-        index_body={
-            'settings': {
-                'index': {
-                    'number_of_shards': 3 # Generic advice is 10-50 GB of data per shard
-                }
-            }
-        }
-
-        _=client.indices.create(index_name, body=index_body)
-
-    # Close client
-    client.close()

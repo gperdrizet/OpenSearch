@@ -1,24 +1,19 @@
 '''Processes dump in XML or CirrusSearch format, indexes to OpenSearch
 or writes documents to file.'''
 
+from __future__ import annotations
 from typing import Union, Callable
-from bz2 import BZ2File
-from gzip import GzipFile
 from threading import Thread
 from multiprocessing import Manager, Process
-from wikisearch.classes.cirrussearch_reader import CirrusSearchReader
+import wikisearch.functions.helper_functions as helper_funcs
 import wikisearch.functions.io_functions as io_funcs
 
 def run(
-    input_stream: Union[GzipFile, BZ2File],
+    input_stream: Union[GzipFile, BZ2File], # type: ignore
     stream_reader: Callable,
-    index_name: str,
-    output_destination: str,
-    reader_instance: CirrusSearchReader,
+    reader_instance: Union[XMLReader,CirrusSearchReader], # type: ignore
     parser_function: Callable,
-    parse_workers: int,
-    upsert_workers: int,
-    upsert_batch_size: int
+    args: dict
 ) -> None:
 
     '''Main function to parse and upsert dumps'''
@@ -34,29 +29,29 @@ def run(
     reader_instance.callback=input_queue.put
 
     # Initialize the target index
-    io_funcs.initialize_index(index_name)
+    helper_funcs.initialize_index(args.index)
 
     # Start the status monitor printout
     Thread(
-        target=io_funcs.display_status,
+        target=helper_funcs.display_status,
         args=(input_queue, output_queue, reader_instance)
     ).start()
 
     # Start parser jobs
-    for _ in range(parse_workers):
+    for _ in range(args.parse_workers):
 
         Process(
             target=parser_function,
-            args=(input_queue, output_queue, index_name)
+            args=(input_queue, output_queue, args.index)
         ).start()
 
     # Target the correct output function
 
     # Start writer jobs
-    for _ in range(upsert_workers):
+    for _ in range(args.output_workers):
 
         # Save to file
-        if output_destination == 'file':
+        if args.output == 'file':
 
             write_process=Process(
                 target=io_funcs.write_file,
@@ -64,16 +59,16 @@ def run(
             )
 
         # Insert to OpenSearch
-        elif output_destination == 'opensearch':
+        elif args.output == 'opensearch':
 
             write_process=Process(
                 target=io_funcs.bulk_index_articles,
-                args=(output_queue,upsert_batch_size)
+                args=(output_queue,args.upsert_batch)
             )
 
         # Not sure what to do - warn user
         else:
-            print(f'Unrecognized output destination: {output_destination}.')
+            print(f'Unrecognized output destination: {args.output}.')
 
         # Start the output writer thread
         write_process.start()
