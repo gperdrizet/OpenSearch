@@ -28,15 +28,15 @@ if __name__ == '__main__':
 
         # Start the run
         process_dump.run(
-            input_stream=BZ2File(args.xml_input),
+            input_stream=BZ2File(args.input),
             stream_reader=io_funcs.consume_xml_stream,
-            index_name=args.xml_index,
+            index_name=args.index,
             output_destination=args.output,
             reader_instance=XMLReader(),
             parser_function=parse_funcs.parse_xml_article,
-            parse_workers=conf.XML_PARSE_WORKERS,
-            upsert_workers=conf.XML_OUTPUT_WORKERS,
-            upsert_batch_size=conf.BULK_BATCH_SIZE
+            parse_workers=args.parse_workers,
+            upsert_workers=args.output_workers,
+            upsert_batch_size=args.upsert_batch
         )
 
     # Bulk inserts a CirrusSearch index directly
@@ -45,15 +45,15 @@ if __name__ == '__main__':
 
         # Start the run
         process_dump.run(
-            input_stream=GzipFile(args.cs_input),
+            input_stream=GzipFile(args.input),
             stream_reader=io_funcs.consume_json_lines_stream,
-            index_name=args.cs_index,
+            index_name=args.index,
             output_destination=args.output,
             reader_instance=CirrusSearchReader(),
             parser_function=parse_funcs.parse_cirrussearch_article,
-            parse_workers=conf.CS_PARSE_WORKERS,
-            upsert_workers=conf.CS_OUTPUT_WORKERS,
-            upsert_batch_size=conf.BULK_BATCH_SIZE
+            parse_workers=args.parse_workers,
+            upsert_workers=args.output_workers,
+            upsert_batch_size=args.upsert_batch
         )
 
     # Runs interactive command line search utility

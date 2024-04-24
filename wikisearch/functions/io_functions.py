@@ -26,9 +26,62 @@ def make_arg_parser() -> argparse.Namespace:
     # Add argument for task to run
     parser.add_argument(
         'task',
-        choices=['update_xml_dump', 'process_xml_dump', 'process_cs_dump', 'test_search'],
+        choices=['process_xml_dump', 'process_cs_dump', 'test_search'],
         help='[update_xml_dump, process_xml_dump, process_cs_dump, test_search]',
         metavar='TASK_NAME_STRING'
+    )
+
+    # Add argument to specify name of input dump file, set
+    # default value to None so we can add the correct path
+    # for the dump type after arguments are parsed
+    parser.add_argument(
+        '--dump',
+        required=False,
+        default=None,
+        help='path to input dump file',
+        metavar=''
+    )
+
+    # Add argument to specify name of target OpenSearch index for insert
+    # or testing search, set default value to None so we can add a sane
+    # default after we parse the arguments know the task we are running
+    parser.add_argument(
+        '--index',
+        required=False,
+        default=None,
+        help='name of OpenSearch index for insert or search test',
+        metavar=''
+    )
+
+    # Add argument to specify number of parse workers, set default value 
+    # to None so we can add a sane default after we parse the arguments 
+    # know the task we are running
+    parser.add_argument(
+        '--parse_workers',
+        required=False,
+        default=None,
+        help='number of parse workers to spawn',
+        metavar=''
+    )
+
+    # Add argument to specify number of output workers, set default value
+    # to None so we can add a sane default after we parse the arguments
+    # know the task we are running
+    parser.add_argument(
+        '--output_workers',
+        required=False,
+        default=None,
+        help='number of output workers to spawn',
+        metavar=''
+    )
+
+    # Add argument to specify bulk upsert batch size
+    parser.add_argument(
+        '--upsert_batch',
+        required=False,
+        default=100,
+        help='number of documents per bulk upsert batch',
+        metavar=''
     )
 
     # Add argument for parsed output destination
@@ -41,53 +94,38 @@ def make_arg_parser() -> argparse.Namespace:
         metavar=''
     )
 
-    # Add argument to specify name of target OpenSearch index for insert
-    # or testing search
-    parser.add_argument(
-        '--index',
-        required=False,
-        default=None,
-        help='name of OpenSearch index for insert or search test',
-        metavar=''
-    )
-
-    # Add argument to specify name of input xml dump file
-    parser.add_argument(
-        '--xml_input',
-        required=False,
-        default=config.XML_INPUT_FILE,
-        help='path to input XML dump file',
-        metavar=''
-    )
-
-    # Add argument to specify name of input cs dump file
-    parser.add_argument(
-        '--cs_input',
-        required=False,
-        default=config.CS_INPUT_FILE,
-        help='path to input CirrusSearch dump file',
-        metavar=''
-    )
-
-    # Add argument to specify name of OpenSearch index for XML dumps
-    parser.add_argument(
-        '--xml_index',
-        required=False,
-        default=config.XML_INDEX,
-        help='name of target OpenSearch index for XML dumps',
-        metavar=''
-    )
-
-    # Add argument to specify name of OpenSearch index for CS dumps
-    parser.add_argument(
-        '--cs_index',
-        required=False,
-        default=config.CS_INDEX,
-        help='name of target OpenSearch index for CirrusSearch dumps',
-        metavar=''
-    )
-
     args=parser.parse_args()
+
+    # Set task dependent defaults unless the user has supplied alternatives
+    if args.task == 'process_xml_dump':
+        if args.dump is None:
+            args.dump=config.XML_INPUT_FILE
+
+        if args.index is None:
+            args.index=config.XML_INDEX
+
+        if args.parse_workers is None:
+            args.parse_workers=config.XML_PARSE_WORKERS
+
+        if args.output_workers is None:
+            args.output_workers=config.XML_OUTPUT_WORKERS
+
+    if args.task == 'process_cs_dump':
+        if args.dump is None:
+            args.dump=config.CS_INPUT_FILE
+
+        if args.index is None:
+            args.index=config.CS_INDEX
+
+        if args.parse_workers is None:
+            args.parse_workers=config.CS_PARSE_WORKERS
+
+        if args.output_workers is None:
+            args.output_workers=config.CS_OUTPUT_WORKERS
+
+    if args.task == 'search_test':
+        if args.index is None:
+            args.index=config.XML_INDEX
 
     return args
 
