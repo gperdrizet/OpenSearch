@@ -6,7 +6,7 @@ from typing import Union, Callable
 from threading import Thread
 from multiprocessing import Manager, Process
 import wikisearch.functions.helper_functions as helper_funcs
-import wikisearch.functions.io_functions as io_funcs
+import wikisearch.functions.output_functions as output_funcs
 
 def run(
     input_stream: Union[GzipFile, BZ2File], # type: ignore
@@ -45,30 +45,15 @@ def run(
             args=(input_queue, output_queue, args.index)
         ).start()
 
-    # Target the correct output function
-
     # Start writer jobs
     for _ in range(args.output_workers):
 
-        # Save to file
-        if args.output == 'file':
-
-            write_process=Process(
-                target=io_funcs.write_file,
-                args=(output_queue, 'cirrus_search')
-            )
-
-        # Insert to OpenSearch
-        elif args.output == 'opensearch':
-
-            write_process=Process(
-                target=io_funcs.bulk_index_articles,
-                args=(output_queue,args.upsert_batch)
-            )
-
-        # Not sure what to do - warn user
-        else:
-            print(f'Unrecognized output destination: {args.output}.')
+        # Send output queue to output selector so write traffic
+        # gets sent to the correct place
+        write_process=Process(
+            target=output_funcs.output_selector,
+            args=(args, output_queue)
+        )
 
         # Start the output writer thread
         write_process.start()

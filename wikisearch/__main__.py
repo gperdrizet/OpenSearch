@@ -5,6 +5,7 @@ from gzip import GzipFile
 
 from wikisearch import process_dump
 from wikisearch import test_search
+from wikisearch import make_sample
 
 from wikisearch.classes.xml_reader import XMLReader
 from wikisearch.classes.cirrussearch_reader import CirrusSearchReader
@@ -51,6 +52,12 @@ if __name__ == '__main__':
     # Runs interactive command line search utility
     elif args.task == 'test_search':
         test_search.run(args.index)
+
+    # Takes a small (n=5000) sample of a dump file and saves it
+    # for rapid prototyping/testing
+    elif args.task == 'make_sample_data':
+        make_sample.run(args.dump)
+
 
     # Planned - gets new xml dump
     elif args.task == 'update_xml_dump':

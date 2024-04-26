@@ -1,6 +1,7 @@
 '''Functions to read data stream from dump files and send
 to proper stream reader class instance'''
 
+from __future__ import annotations
 from typing import Callable
 from xml import sax
 

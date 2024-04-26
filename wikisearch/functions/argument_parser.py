@@ -18,8 +18,8 @@ def parse_arguments() -> argparse.Namespace:
     # Add argument for task to run
     parser.add_argument(
         'task',
-        choices=['process_xml_dump', 'process_cs_dump', 'test_search'],
-        help='[update_xml_dump, process_xml_dump, process_cs_dump, test_search]',
+        choices=['process_xml_dump', 'process_cs_dump', 'make_sample_data', 'test_search'],
+        help='[update_xml_dump, process_xml_dump, process_cs_dump, make_sample_data, test_search]',
         metavar='TASK_NAME_STRING'
     )
 
