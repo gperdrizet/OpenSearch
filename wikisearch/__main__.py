@@ -10,12 +10,13 @@ from wikisearch.classes.xml_reader import XMLReader
 from wikisearch.classes.cirrussearch_reader import CirrusSearchReader
 
 import wikisearch.functions.io_functions as io_funcs
+import wikisearch.functions.argument_parser as arg_parser
 import wikisearch.functions.parsing_functions as parse_funcs
 
 if __name__ == '__main__':
 
     # Set and parse command line args
-    args=io_funcs.get_arguments()
+    args=arg_parser.parse_arguments()
 
     # Decide what to do and how to do it based on
     # user provided arguments
