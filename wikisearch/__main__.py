@@ -9,8 +9,8 @@ from wikisearch import test_search
 from wikisearch.classes.xml_reader import XMLReader
 from wikisearch.classes.cirrussearch_reader import CirrusSearchReader
 
-import wikisearch.functions.io_functions as io_funcs
 import wikisearch.functions.argument_parser as arg_parser
+import wikisearch.functions.file_stream_readers as stream_readers
 import wikisearch.functions.parsing_functions as parse_funcs
 
 if __name__ == '__main__':
@@ -29,7 +29,7 @@ if __name__ == '__main__':
         # Start the run
         process_dump.run(
             input_stream=BZ2File(args.dump),
-            stream_reader=io_funcs.consume_xml_stream,
+            stream_reader=stream_readers.xml,
             reader_instance=XMLReader(),
             parser_function=parse_funcs.parse_xml_article,
             args=args
@@ -42,7 +42,7 @@ if __name__ == '__main__':
         # Start the run
         process_dump.run(
             input_stream=GzipFile(args.dump),
-            stream_reader=io_funcs.consume_json_lines_stream,
+            stream_reader=stream_readers.json_lines,
             reader_instance=CirrusSearchReader(),
             parser_function=parse_funcs.parse_cirrussearch_article,
             args=args

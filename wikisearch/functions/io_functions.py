@@ -6,31 +6,7 @@ import time
 from typing import Callable
 from xml import sax
 from opensearchpy import exceptions
-from wikisearch import config
 import wikisearch.functions.helper_functions as helper_funcs
-
-def consume_xml_stream(
-    input_stream: BZ2File, # type: ignore
-    reader_instance: Callable
-) -> None:
-
-    '''Takes input data stream from file passes it to
-    the reader via xml's sax parser.'''
-
-    sax.parse(input_stream, reader_instance)
-
-def consume_json_lines_stream(
-    input_stream: GzipFile, # type: ignore
-    reader_instance: Callable
-) -> None:
-
-    '''Takes input stream containing json lines data, passes it
-    line by line to reader class instance'''
-
-    # Loop on lines
-    for line in input_stream:
-
-        reader_instance.read_line(line)
 
 def bulk_index_articles(
     output_queue: multiprocessing.Queue, # type: ignore
