@@ -90,7 +90,7 @@ def bulk_index_articles(
         incoming_articles.extend(output)
 
         # Once we have 500 articles, process them and index
-        if len(incoming_articles) / 2 >= batch_size:
+        if len(incoming_articles) // 2 >= int(batch_size):
 
             # Once we have all of the articles formatted and collected, insert them
             # catching any connection timeout errors from OpenSearch

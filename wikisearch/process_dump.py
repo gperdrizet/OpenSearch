@@ -31,11 +31,11 @@ def run(
     # Initialize the target index
     helper_funcs.initialize_index(args.index)
 
-    # Start the status monitor printout
-    Thread(
-        target=helper_funcs.display_status,
-        args=(input_queue, output_queue, reader_instance)
-    ).start()
+    # # Start the status monitor printout
+    # Thread(
+    #     target=helper_funcs.display_status,
+    #     args=(input_queue, output_queue, reader_instance)
+    # ).start()
 
     # Start parser jobs
     for _ in range(args.parse_workers):
