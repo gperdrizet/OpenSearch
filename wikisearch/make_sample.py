@@ -21,14 +21,16 @@ def run(dump: str) -> None:
         # Open dump file as an input stream
         input_stream=bz2.BZ2File(dump)
 
-        # Open bz2 file in binary mode for writing
+        # Open bz2 file in binary mode for write
         with bz2.open(output_file_name, 'wb') as output_file:
 
             # Loop for 100k lines and write to output
             i=0
-            while i < 100000:
+            while i < 200000:
                 output_file.write(next(input_stream))
                 i+=1
+
+            output_file.close()
 
     # Handle CirrusSearch dump
     elif file_extension == 'json.gz':
@@ -37,8 +39,8 @@ def run(dump: str) -> None:
         # Open dump file as an input stream
         input_stream=gzip.GzipFile(dump)
         
-        # Open gzip file in binary mode for appending
-        with gzip.open(output_file_name, 'ab') as output_file:
+        # Open gzip file in binary mode for write
+        with gzip.open(output_file_name, 'wb') as output_file:
 
             # Loop on the input stream writing to output 10000
             # time (or 5000 articles)
@@ -49,7 +51,7 @@ def run(dump: str) -> None:
                 output_file.write(line)
                 n+=1
 
-        output_file.close()
+            output_file.close()
 
     else:
         print('Unrecognized dump file type')
