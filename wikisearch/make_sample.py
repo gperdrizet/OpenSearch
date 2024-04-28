@@ -24,11 +24,33 @@ def run(dump: str) -> None:
         # Open bz2 file in binary mode for write
         with bz2.open(output_file_name, 'wb') as output_file:
 
-            # Loop for 100k lines and write to output
+            # Loop until we have found 5000 page tags
+            # and then come to the next closing page tag
             i=0
-            while i < 200000:
-                output_file.write(next(input_stream))
-                i+=1
+            while True:
+
+                # Get the next line
+                line=next(input_stream)
+
+                # Write it to output
+                output_file.write(line)
+
+                # Count page tags as a proxy for number of
+                # articles
+                if '<page>' in line.decode():
+                    i+=1
+
+                # Once we have seen 5000 page tags and have
+                # come to a closing page tag, stop
+                if i>=5000 and '</page>' in line.decode():
+
+                    # Add a closing mediawiki tag so the XML
+                    # tree is not incomplete
+                    output_file.write('</mediawiki>'.encode())
+                    
+                    # Stop the loop
+                    break
+
 
             output_file.close()
 
