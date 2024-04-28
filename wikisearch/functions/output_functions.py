@@ -89,7 +89,9 @@ def bulk_index_articles(
         # Add it to batch
         incoming_articles.extend(output)
 
-        # Once we have 500 articles, process them and index
+        # Once we have a full batch, send it to the opensearch bulk insert function
+        # the divide by 2 is necessary because each article is represented by two
+        # elements, the header and the content
         if len(incoming_articles) // 2 >= int(batch_size):
 
             # Once we have all of the articles formatted and collected, insert them

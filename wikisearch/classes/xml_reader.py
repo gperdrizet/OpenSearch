@@ -81,12 +81,15 @@ class XMLReader(ContentHandler):
                 # And has namespace 0 (article)
                 if self.read_namespace == 0:
 
-                    # Call the callback to add the article title and text
-                    # to the parser's input queue
-                    self.callback((self.read_title, self.read_text, self.status_count))
+                    # And is not a redirect page
+                    if 'REDIRECT' not in self.read_text.split('\n')[0].upper():
 
-                    # Count
-                    self.status_count += 1
+                        # Call the callback to add the article title and text
+                        # to the parser's input queue
+                        self.callback((self.read_title, self.read_text, self.status_count))
+
+                        # Count
+                        self.status_count += 1
 
 
     def characters(self, content):

@@ -73,41 +73,37 @@ def parse_xml_article(
             keep_template_params=False
         )
 
-        # Before we do anything else, check to see if this is a redirect
-        # page. If so, we can just skip it.
-        if 'REDIRECT' not in source_string.split('\n')[0].upper():
+        # Remove extra sections from the end of the document
+        source_string=remove_extra_sections(source_string)
 
-            # Remove extra sections from the end of the document
-            source_string=remove_extra_sections(source_string)
+        # Do some string replacements
+        source_string=fix_bad_symbols(source_string)
 
-            # Do some string replacements
-            source_string=fix_bad_symbols(source_string)
+        # Clean up newlines
+        source_string=clean_newlines(source_string)
 
-            # Clean up newlines
-            source_string=clean_newlines(source_string)
+        # Get rid of image thumbnail lines and leading spaces
+        source_string=remove_thumbnails(source_string)
 
-            # Get rid of image thumbnail lines and leading spaces
-            source_string=remove_thumbnails(source_string)
-
-            # Create formatted dicts for the request and the
-            # content to send to open search
-            request_header={
-                'update': {
-                    '_index': index_name, 
-                    '_id': article_num
-                }
+        # Create formatted dicts for the request and the
+        # content to send to open search
+        request_header={
+            'update': {
+                '_index': index_name, 
+                '_id': article_num
             }
+        }
 
-            formatted_article={
-                'doc': {
-                    'title': page_title, 
-                    'text': source_string
-                },
-                'doc_as_upsert': 'true'
-            }
+        formatted_article={
+            'doc': {
+                'title': page_title, 
+                'text': source_string
+            },
+            'doc_as_upsert': 'true'
+        }
 
-            # Put the result into the output queue
-            output_queue.put((request_header, formatted_article))
+        # Put the result into the output queue
+        output_queue.put((request_header, formatted_article))
 
 
 def fix_bad_symbols(source_string: str) -> str:
