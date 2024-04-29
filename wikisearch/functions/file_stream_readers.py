@@ -28,3 +28,6 @@ def json_lines(
     for line in input_stream:
 
         reader_instance.read_line(line)
+
+    # Once we have read the whole file, send done into the reader instance
+    reader_instance.read_line('done')

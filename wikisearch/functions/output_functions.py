@@ -1,6 +1,8 @@
 '''Functions for handling output of data to files or indexing into OpenSearch'''
 
 from __future__ import annotations
+import os
+import glob
 import time
 from opensearchpy import exceptions
 import wikisearch.functions.helper_functions as helper_funcs
@@ -19,15 +21,16 @@ def output_selector(
         # Set article source for save file path based on task
         article_source='unknown'
 
-        if args.task=='parse_xml_dump':
+        if args.task == 'process_xml_dump':
             article_source='xml'
 
-        elif args.task=='parse_cs_dump':
-            article_source=='cirrussearch'
+        elif args.task == 'process_cs_dump':
+            article_source='cirrussearch'
 
         _=write_file(
             output_queue=output_queue,
-            article_source=article_source
+            article_source=article_source,
+            parse_workers=args.parse_workers
         )
     
     # Send the output to the OpenSearch bulk indexer
@@ -41,10 +44,23 @@ def output_selector(
 
 def write_file(
     output_queue: multiprocessing.Queue, # type: ignore
-    article_source: str
+    article_source: str,
+    parse_workers: int
 ) -> None:
 
     '''Takes documents from parser's output queue, writes to file.'''
+
+    # Construct output path
+    output_path=f'wikisearch/data/articles/{article_source}'
+
+    # Clear the output directory
+    files=glob.glob(f'{output_path}/*')
+
+    for f in files:
+        os.remove(f)
+
+    # Counter to track how many done signals we have received
+    done_count=0
 
     # Loop forever
     while True:
@@ -52,20 +68,31 @@ def write_file(
         # Get article from queue
         output=output_queue.get()
 
-        # Extract title and text
-        title=output[1]['doc']['title']
-        content=str(output[0]) + '\n' + str(output[1])
+        # Check for done signal from parser and count it.
+        if output[0] == 'done':
+            done_count+=1
 
-        # Format page title for use as a filename
-        file_name=title.replace(' ', '_')
-        file_name=file_name.replace('/', '-')
+            # If we have seen a done signal from each parse worker, return
+            if done_count == parse_workers:
+                return
 
-        # Construct output path
-        output = f'wikisearch/data/articles/{article_source}/{file_name}'
+        # If the queue item is not a done signal, process it
+        else:
 
-        # Save article to a file
-        with open(output, 'w', encoding="utf-8") as text_file:
-            text_file.write(f'{title}\n{content}')
+            # Extract title and text
+            title=output[1]['doc']['title']
+            content=output[1]['doc']['text']
+
+            # Format page title for use as a filename
+            file_name=title.replace(' ', '_')
+            file_name=file_name.replace('/', '-')
+
+            # Construct output path
+            output = f'{output_path}/{file_name}'
+
+            # Save article to a file
+            with open(output, 'w', encoding='utf-8') as text_file:
+                text_file.write(f'{title}\n{content}')
 
 def bulk_index_articles(
     output_queue: multiprocessing.Queue, # type: ignore

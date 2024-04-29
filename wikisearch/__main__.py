@@ -44,7 +44,7 @@ if __name__ == '__main__':
         process_dump.run(
             input_stream=GzipFile(args.dump),
             stream_reader=stream_readers.json_lines,
-            reader_instance=CirrusSearchReader(),
+            reader_instance=CirrusSearchReader(args.parse_workers),
             parser_function=parse_funcs.parse_cirrussearch_article,
             args=args
         )

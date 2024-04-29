@@ -68,7 +68,7 @@ def run(dump: str) -> None:
             # time (or 5000 articles)
             n=0
 
-            while n < 10000:
+            while n < 200:
                 line=next(input_stream)
                 output_file.write(line)
                 n+=1

@@ -1,13 +1,13 @@
 '''Functions to parse data read from dumps and related helper functions'''
 
-import time
 import multiprocessing
 import mwparserfromhell # type: ignore
 
 def parse_cirrussearch_article(
     input_queue: multiprocessing.Queue,
     output_queue: multiprocessing.Queue,
-    index_name: str
+    index_name: str,
+    output_workers: int
 ) -> None:
 
     '''Parses JSON lines data read from a CirrusSearch dump.'''
@@ -15,18 +15,33 @@ def parse_cirrussearch_article(
     while True:
 
         # Get the header and the content source from the article queue
-        header, content, article_num=input_queue.get()
+        header, content, status_count=input_queue.get()
+        article_num=status_count[1]
+        status=status_count[0]
 
-        # Make some updates to the header to make it compatible with OpenSearch
-        header=update_cs_index(header, index_name, article_num)
+        # Check for the done signal from the sax parser, when we find it,
+        # pass it on to the output workers and return
+        if status == 'done':
 
-        # Alter the content format for upserting
-        upsert_content={}
-        upsert_content['doc']=content
-        upsert_content['doc_as_upsert']='true'
+            for _ in range(output_workers):
+                output_queue.put(('done', 'done'))
 
-        # Put the result into the output queue
-        output_queue.put((header, upsert_content))
+            return
+
+        # If what we got from the queue is not the done signal,
+        # process it
+        else:
+
+            # Make some updates to the header to make it compatible with OpenSearch
+            header=update_cs_index(header, index_name, article_num)
+
+            # Alter the content format for upserting
+            upsert_content={}
+            upsert_content['doc']=content
+            upsert_content['doc_as_upsert']='true'
+
+            # Put the result into the output queue
+            output_queue.put((header, upsert_content))
 
 def update_cs_index(
     line: dict,

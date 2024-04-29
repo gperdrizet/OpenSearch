@@ -5,7 +5,7 @@ import json
 class CirrusSearchReader():
     '''Class to XML objects from CirrusSearch dump.'''
 
-    def __init__(self):
+    def __init__(self, parse_workers):
 
         # Add empty callback function
         self.callback=self._callback_placeholder
@@ -15,7 +15,11 @@ class CirrusSearchReader():
         self.buffer = []
 
         # Start article count
-        self.status_count=0
+        self.status_count=['running', 0]
+
+        # Number of parse workers that need to see the
+        # done signal when we are finished
+        self.parse_workers=parse_workers
 
     def _callback_placeholder(self, _):
         '''Placeholder for callback functions. Exists to allow 
@@ -27,16 +31,33 @@ class CirrusSearchReader():
         '''Accumulates lines from JSON lines data until buffer
         is full, then flushed buffer to parser input queue.'''
 
-        # Convert line to dict
-        line=json.loads(line)
+        # Check for done signal from stream reader, when
+        # we find it, put done in the buffer and flush
+        if line == 'done':
 
-        # Add it to the buffer
-        self.buffer.append(line)
+            self.status_count[0]='done'
 
-        # If we have two lines in the buffer
-        # flush it
-        if len(self.buffer) == 2:
-            self.flush_buffer()
+            for _ in range(self.parse_workers):
+                self.buffer.extend(['done','done'])
+                self.flush_buffer()
+
+        # If it's not the done signal, process it
+        else:
+
+            # Convert line to dict
+            line=json.loads(line)
+
+            # Add it to the buffer
+            self.buffer.append(line)
+
+            # If we have two lines in the buffer
+            # flush it
+            if len(self.buffer) == 2:
+
+                # Update article count
+                self.status_count[1] += 1
+
+                self.flush_buffer()
 
     def flush_buffer(self):
         '''Sends contents of buffer, along with count of articles
@@ -49,7 +70,4 @@ class CirrusSearchReader():
 
         # Clear the buffer
         self.buffer = []
-
-        # Update article count
-        self.status_count += 1
         
