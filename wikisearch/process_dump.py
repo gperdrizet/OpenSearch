@@ -2,6 +2,7 @@
 or writes documents to file.'''
 
 from __future__ import annotations
+import time
 from typing import Union, Callable
 from threading import Thread
 from multiprocessing import Manager, Process
@@ -31,10 +32,10 @@ def run(
     # Initialize the target index
     helper_funcs.initialize_index(args.index)
 
-    # Start the status monitor printout
+    # Start the status monitor
     Thread(
         target=helper_funcs.display_status,
-        args=(input_queue, output_queue, reader_instance)
+        args=(input_queue, output_queue, reader_instance, args.status_monitor)
     ).start()
 
     # Start parser jobs
@@ -42,7 +43,7 @@ def run(
 
         Process(
             target=parser_function,
-            args=(input_queue, output_queue, args.index)
+            args=(input_queue, output_queue, args.index, args.output_workers)
         ).start()
 
     # Start writer jobs
@@ -60,3 +61,8 @@ def run(
 
     # Send the data stream to the reader
     stream_reader(input_stream, reader_instance)
+
+    # Make sure that the queues are empty before exiting
+    while True:
+        if input_queue.empty() and output_queue.empty():
+            break

@@ -15,6 +15,7 @@ def xml(
 
     sax.parse(input_stream, reader_instance)
 
+
 def json_lines(
     input_stream: GzipFile, # type: ignore
     reader_instance: Callable

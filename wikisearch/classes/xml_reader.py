@@ -2,12 +2,11 @@
 and send to document parser's input queue.'''
 
 from xml.sax import ContentHandler
-
 class XMLReader(ContentHandler):
     '''Class to read tags parsed from bz2 data stream 
     via xml.sax's parser'''
 
-    def __init__(self):
+    def __init__(self, parse_workers):
         super().__init__()
 
         # Add empty callback function
@@ -20,7 +19,11 @@ class XMLReader(ContentHandler):
         self.read_namespace=None
 
         # Start article count
-        self.status_count=0
+        self.status_count=['running', 0]
+
+        # Number of parse workers that need to see the
+        # done signal when we are finished
+        self.parse_workers=parse_workers
 
     def _callback_placeholder(self, _):
         '''Placeholder for callback functions. Exists to allow 
@@ -52,6 +55,12 @@ class XMLReader(ContentHandler):
         elif name == 'text':
             self.read_text=''
 
+        # Make sure the opening mediawiki tag gets
+        # added to the stack so that we can catch
+        # the closing one to end the parse
+        elif name == 'mediawiki':
+            pass
+
         # If it's none of those, do nothing
         else:
             return
@@ -73,7 +82,7 @@ class XMLReader(ContentHandler):
             del self.read_stack[-1]
 
         # If it's a page tag
-        if name == "page":
+        if name == 'page':
 
             # That has text
             if self.read_text is not None:
@@ -89,7 +98,16 @@ class XMLReader(ContentHandler):
                         self.callback((self.read_title, self.read_text, self.status_count))
 
                         # Count
-                        self.status_count += 1
+                        self.status_count[1] += 1
+
+        # If it's the closing mediawiki tag, we are done, tell the parser
+        if name == 'mediawiki':
+
+            self.status_count[0]='done'
+
+            # Put one done signal in the parser queue for each parse worker
+            for _ in range(self.parse_workers):
+                self.callback(('done', 'done', self.status_count))
 
 
     def characters(self, content):

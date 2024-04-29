@@ -1,5 +1,6 @@
 '''Functions to parse data read from dumps and related helper functions'''
 
+import time
 import multiprocessing
 import mwparserfromhell # type: ignore
 
@@ -53,57 +54,73 @@ def update_cs_index(
 def parse_xml_article(
     input_queue: multiprocessing.Queue,
     output_queue: multiprocessing.Queue,
-    index_name: str
+    index_name: str,
+    output_workers: int
 ) -> None:
 
     '''Parses Wikicode page source recovered from XML dump.'''
 
     while True:
 
-        # Get the page title and the content source from the article queue
-        page_title, source, article_num=input_queue.get()
+        # Get the page title, content source and article num from the article queue
+        page_title, source, status_count=input_queue.get()
+        article_num=status_count[1]
+        status=status_count[0]
 
-        # Convert source string to wikicode
-        wikicode=mwparserfromhell.parse(source)
+        # Check for the done signal from the sax parser, when we find it,
+        # pass it on to the output workers and return
+        if status == 'done':
 
-        # Strip garbage out of wikicode source
-        source_string=wikicode.strip_code(
-            normalize=True,
-            collapse=True,
-            keep_template_params=False
-        )
+            for _ in range(output_workers):
+                output_queue.put(('done', 'done'))
 
-        # Remove extra sections from the end of the document
-        source_string=remove_extra_sections(source_string)
+            return
 
-        # Do some string replacements
-        source_string=fix_bad_symbols(source_string)
+        # If what we got from the queue is not the done signal,
+        # process it
+        else:
 
-        # Clean up newlines
-        source_string=clean_newlines(source_string)
+            # Convert source string to wikicode
+            wikicode=mwparserfromhell.parse(source)
 
-        # Get rid of image thumbnail lines and leading spaces
-        source_string=remove_thumbnails(source_string)
+            # Strip garbage out of wikicode source
+            source_string=wikicode.strip_code(
+                normalize=True,
+                collapse=True,
+                keep_template_params=False
+            )
 
-        # Create formatted dicts for the request and the
-        # content to send to open search
-        request_header={
-            'update': {
-                '_index': index_name, 
-                '_id': article_num
+            # Remove extra sections from the end of the document
+            source_string=remove_extra_sections(source_string)
+
+            # Do some string replacements
+            source_string=fix_bad_symbols(source_string)
+
+            # Clean up newlines
+            source_string=clean_newlines(source_string)
+
+            # Get rid of image thumbnail lines and leading spaces
+            source_string=remove_thumbnails(source_string)
+
+            # Create formatted dicts for the request and the
+            # content to send to open search
+            request_header={
+                'update': {
+                    '_index': index_name, 
+                    '_id': article_num
+                }
             }
-        }
 
-        formatted_article={
-            'doc': {
-                'title': page_title, 
-                'text': source_string
-            },
-            'doc_as_upsert': 'true'
-        }
+            formatted_article={
+                'doc': {
+                    'title': page_title, 
+                    'text': source_string
+                },
+                'doc_as_upsert': 'true'
+            }
 
-        # Put the result into the output queue
-        output_queue.put((request_header, formatted_article))
+            # Put the result into the output queue
+            output_queue.put((request_header, formatted_article))
 
 
 def fix_bad_symbols(source_string: str) -> str:

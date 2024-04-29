@@ -31,7 +31,7 @@ if __name__ == '__main__':
         process_dump.run(
             input_stream=BZ2File(args.dump),
             stream_reader=stream_readers.xml,
-            reader_instance=XMLReader(),
+            reader_instance=XMLReader(args.parse_workers),
             parser_function=parse_funcs.parse_xml_article,
             args=args
         )

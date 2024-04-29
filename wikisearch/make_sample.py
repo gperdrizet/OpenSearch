@@ -42,7 +42,7 @@ def run(dump: str) -> None:
 
                 # Once we have seen 5000 page tags and have
                 # come to a closing page tag, stop
-                if i>=5000 and '</page>' in line.decode():
+                if i>=1000 and '</page>' in line.decode():
 
                     # Add a closing mediawiki tag so the XML
                     # tree is not incomplete

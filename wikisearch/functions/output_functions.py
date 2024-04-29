@@ -35,7 +35,8 @@ def output_selector(
 
         _=bulk_index_articles(
             output_queue=output_queue,
-            batch_size=args.upsert_batch
+            batch_size=args.upsert_batch,
+            parse_workers=args.parse_workers
         )
 
 def write_file(
@@ -53,7 +54,6 @@ def write_file(
 
         # Extract title and text
         title=output[1]['doc']['title']
-        #content=output[1]['text']
         content=str(output[0]) + '\n' + str(output[1])
 
         # Format page title for use as a filename
@@ -69,7 +69,8 @@ def write_file(
 
 def bulk_index_articles(
     output_queue: multiprocessing.Queue, # type: ignore
-    batch_size: int
+    batch_size: int,
+    parse_workers: int
 ) -> None:
     '''Batch index documents and insert in to OpenSearch from 
     parser output queue'''
@@ -80,32 +81,46 @@ def bulk_index_articles(
     # List to collect articles from queue until we have enough for a batch
     incoming_articles = []
 
+    # Counter to track how many done signals we have received
+    done_count=0
+
     # Loop forever
     while True:
 
         # Get article from queue
         output=output_queue.get()
 
-        # Add it to batch
-        incoming_articles.extend(output)
+        # Check for done signal from parser and count it.
+        if output[0] == 'done':
+            done_count+=1
 
-        # Once we have a full batch, send it to the opensearch bulk insert function
-        # the divide by 2 is necessary because each article is represented by two
-        # elements, the header and the content
-        if len(incoming_articles) // 2 >= int(batch_size):
+            # If we have seen a done signal from each parse worker, return
+            if done_count == parse_workers:
+                return
 
-            # Once we have all of the articles formatted and collected, insert them
-            # catching any connection timeout errors from OpenSearch
-            try:
+        # If the queue item is not a done signal, process it
+        else:
 
-                # Do the insert
-                _=client.bulk(incoming_articles)
+            # Add it to batch
+            incoming_articles.extend(output)
 
-                # Empty the list of articles to collect the next batch
-                incoming_articles = []
+            # Once we have a full batch, send it to the opensearch bulk insert function
+            # the divide by 2 is necessary because each article is represented by two
+            # elements, the header and the content
+            if len(incoming_articles) // 2 >= int(batch_size):
 
-            # If we catch an connection timeout, sleep for a bit and
-            # don't clear the cached articles before continuing the loop
-            except exceptions.ConnectionTimeout:
+                # Once we have all of the articles formatted and collected, insert them
+                # catching any connection timeout errors from OpenSearch
+                try:
 
-                time.sleep(10)
+                    # Do the insert
+                    _=client.bulk(incoming_articles)
+
+                    # Empty the list of articles to collect the next batch
+                    incoming_articles = []
+
+                # If we catch an connection timeout, sleep for a bit and
+                # don't clear the cached articles before continuing the loop
+                except exceptions.ConnectionTimeout:
+
+                    time.sleep(10)

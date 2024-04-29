@@ -31,7 +31,7 @@ def write_file(
         output = f'wikisearch/data/articles/{article_source}/{file_name}'
 
         # Save article to a file
-        with open(output, 'w', encoding="utf-8") as text_file:
+        with open(output, 'w', encoding='utf-8') as text_file:
             text_file.write(f'{title}\n{content}')
 
 
@@ -39,18 +39,41 @@ def display_status(
     input_queue: multiprocessing.Queue, # type: ignore
     output_queue: multiprocessing.Queue, # type: ignore
     reader_instance: CirrusSearchReader, # type: ignore
+    print_output: str
 ) -> None:
 
-    '''Prints queue sizes and articles read every second'''
+    '''Prints queue sizes and articles read every second
+    if desired'''
 
-    print('\n\n\n')
+    if print_output == 'True':
+        print('\n\n\n')
 
     while True:
-        print('\033[F\033[F\033[F', end='')
-        print(f'Input queue size: {input_queue.qsize()}')
-        print(f'Output queue size: {output_queue.qsize()}')
-        print(f'Reader count: {reader_instance.status_count}')
-        time.sleep(1)
+
+        if reader_instance.status_count[0] == 'running':
+        
+            if print_output == 'True':
+
+                print('\033[F\033[F\033[F', end='')
+                print(f'Input queue size: {input_queue.qsize()}')
+                print(f'Output queue size: {output_queue.qsize()}')
+                print(f'Reader count: {reader_instance.status_count[1]}')
+
+            time.sleep(1)
+
+        if reader_instance.status_count[0] == 'done':
+
+            if print_output == 'True':
+
+                print('\n\n\n')
+                print(f'Final count: {reader_instance.status_count[1]}')
+
+            time.sleep(1)
+
+            break
+
+    return
+
 
 def start_client() -> OpenSearch:
 

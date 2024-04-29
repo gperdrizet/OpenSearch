@@ -86,6 +86,16 @@ def parse_arguments() -> argparse.Namespace:
         metavar=''
     )
 
+    # Add argument for status monitor output
+    parser.add_argument(
+        '--status_monitor',
+        required=False,
+        choices=['True', 'False'],
+        default='True',
+        help='Print status monitor output: [True, False]',
+        metavar=''
+    )
+
     args=parser.parse_args()
 
     # Set task dependent defaults unless the user has supplied alternatives
