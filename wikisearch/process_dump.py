@@ -2,7 +2,9 @@
 or writes documents to file.'''
 
 from __future__ import annotations
-import time
+#import time
+import os
+import glob
 from typing import Union, Callable
 from threading import Thread
 from multiprocessing import Manager, Process
@@ -29,8 +31,34 @@ def run(
     # Add the input queue's put function to the reader class's callback method
     reader_instance.callback=input_queue.put
 
-    # Initialize the target index
-    helper_funcs.initialize_index(args.index)
+    # Set up the output sink
+
+    # If we are indexing to OpenSearch, initialize the target index
+    if args.output == 'opensearch':
+        helper_funcs.initialize_index(args.index)
+
+    # If we are writing to file, set up output directory
+    elif args.output == 'file':
+
+        # Construct output path
+        if args.task == 'process_xml_dump':
+            article_source='xml'
+
+        elif args.task == 'process_cs_dump':
+            article_source='cirrussearch'
+
+        else:
+            article_source='unknown'
+
+        output_path=f'wikisearch/data/articles/{article_source}'
+
+        print(f'Output path: {output_path}')
+
+        # Clear the output directory
+        files=glob.glob(f'{output_path}/*')
+
+        for f in files:
+            os.remove(f)
 
     # Start the status monitor
     Thread(
