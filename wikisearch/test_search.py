@@ -42,5 +42,23 @@ def run(test_search_index: str) -> None:
         )
 
         # Print the result
-        print(response)
+        print(f'Result is: {type(response)}')
+
+        for key, value in response.items():
+
+            if key != 'hits':
+                print(f'{key}: {value}')
+            
+            elif key == 'hits':
+                print(f'\nHits contains:')
+
+                for hit, content in response['hits'].items():
+
+                    if hit != 'hits':
+                        print(f' {hit}: {content}')
+
+                    elif hit == 'hits':
+                        print(f'\n Hit 1 contains:')
+                        for hit_key, hit_val in content[1].items():
+                            print(f'  {hit_key}')
         

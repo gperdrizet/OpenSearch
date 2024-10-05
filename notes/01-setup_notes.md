@@ -1,15 +1,15 @@
 # Wikipedia and OpenSearch setup notes
 
-Plan is to get the full text of wikipedia and load it into OpenSearch for use in other projects. From what I have read, this should be surprisingly easy. OpenSearch is available as a docker image and wikipedia publishes production elasticsearch indices weekly. Let's give it a shot:
+Plan is to get the full text of Wikipedia and load it into OpenSearch for use in other projects. From what I have read, this should be surprisingly easy. OpenSearch is available as a docker image and Wikipedia publishes production Elasticsearch indices weekly. Let's give it a shot:
 
 ## Terminology
 
 1. Elasticsearch: Distributed, multitenant-capable full-text search engine with an HTTP web interface
 2. OpenSearch: open source fork of Elasticsearch created by AWS in 2021
 3. CirrusSearch: MediaWiki extension implementing Elasticsearch
-4. MediaWiki: Wiki engine that runs wikipedia and others
+4. MediaWiki: Wiki engine that runs Wikipedia and others
 
-## Download wikipedia
+## Download Wikipedia
 
 Wikipedia seems to publish updated dumps every few days with a somewhat irregular frequency. The CirrusSearch indexes are available at <https://dumps.wikimedia.org/other/cirrussearch/>. The contents of that directory on 2024-04-03 are as follows:
 
@@ -31,7 +31,7 @@ Index of /other/cirrussearch/
 current/    03-Apr-2024 14:08    -
 ```
 
-Get the cirrussearch indexes for the article pages:
+Get the CirrusSearch indexes for the article pages:
 
 ```text
 $ wget https://dumps.wikimedia.org/other/cirrussearch/current/enwiki-20240325-cirrussearch-content.json.gz
@@ -131,7 +131,7 @@ Starts (or tries to start) two node containers - both fail because *OPENSEARCH_I
 - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD}
 ```
 
-Let's set it as an environment variable in the host system via a venv (we are gonna end up using python anyway so might as well). Make and update a venv:
+Let's set it as an environment variable in the host system via a venv (we are going to end up using python anyway so might as well). Make and update a venv:
 
 ```text
 python3 -m venv .venv
@@ -190,11 +190,11 @@ CONTAINER ID   IMAGE                                            COMMAND         
 ff8a2bec145e   opensearchproject/opensearch-dashboards:latest   "./opensearch-dashbo…"   36 minutes ago   Up 36 minutes   0.0.0.0:5601->5601/tcp, :::5601->5601/tcp                                                                  opensearch-dashboards
 ```
 
-Cool - not great that the quickstart guide doesn't work without modification, and we definitely don't want to run with the security plugin disabled for ever. But I think we are gonna call it OK for testing on the private LAN for now. Let's keep going and we will come back to it later.
+Cool - not great that the quick-start guide doesn't work without modification, and we definitely don't want to run with the security plugin disabled forever. But I think we are going to call it OK for testing on the private LAN for now. Let's keep going, and we will come back to it later.
 
 Next, want eyes on the dashboard - since this is running on pyrite, *LOCALHOST* is not going to work, we need it accessible at least on the LAN. The docs point to */usr/share/opensearch-dashboards/config/opensearch_dashboards.yml* for docker:
 
-... Anyone? holy crap the documentation is terrible. After a bit of floundering around, I found [this](https://opensearch.org/docs/2.12/install-and-configure/install-opensearch/docker/):
+... Anyone? Holy crap the documentation is terrible. After a bit of floundering around, I found [this](https://opensearch.org/docs/2.12/install-and-configure/install-opensearch/docker/):
 
 ```text
 If you override opensearch_dashboards.yml settings using environment variables in your compose file, use all uppercase letters and replace periods with underscores (for example, for opensearch.hosts, use OPENSEARCH_HOSTS). This behavior is inconsistent with overriding opensearch.yml settings, where the conversion is just a change to the assignment operator (for example, discovery.type: single-node in opensearch.yml is defined as discovery.type=single-node in docker-compose.yml).
@@ -261,7 +261,7 @@ Now we get a new error:
 {"type":"log","@timestamp":"2024-04-01T04:39:02Z","tags":["error","opensearch","data"],"pid":1,"message":"[ConnectionError]: connect ECONNREFUSED 172.18.0.2:9200"}
 ```
 
-Weird - what the heck is 172.128.0.2? OK - looks like that's opensearch-node1 on the docker opensearch network. So the dashboard can't talk to the nodes. Let's take a look at the logs again.
+Weird - what the heck is 172.128.0.2? OK - looks like that's opensearch-node1 on the docker OpenSearch network. So the dashboard can't talk to the nodes. Let's take a look at the logs again.
 
 Yep, now we have an error in the node logs:
 
@@ -279,7 +279,7 @@ After some deeper reading in the documentation I found that we have two options 
 1. Set up and use a demo config to get started
 2. Remove the security plugin from the nodes and the dashboard and run without it
 
-Apparently the instructions in the 'quickstart' portion of the documentation doesn't really do either correctly. Here is a functioning docker-compose.yaml [from a bit deeper into the docs](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/docker/) that has been modified to start three nodes with 32 GB memory per node.
+Apparently the instructions in the 'quick-start' portion of the documentation doesn't really do either correctly. Here is a functioning docker-compose.yaml [from a bit deeper into the docs](https://opensearch.org/docs/latest/install-and-configure/install-opensearch/docker/) that has been modified to start three nodes with 32 GB memory per node.
 
 ```yaml
 version: '3'
@@ -385,7 +385,7 @@ This is a much better starting point from which we can do a better job of settin
 
 OK, so dashboard is up at <http://0.0.0.0:5601> on the LAN and the nodes are running with clean logs.
 
-Only additional change is to increase "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" to 64GB and restart the containers.
+Only additional change is to increase "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" to 64 GB and restart the containers.
 
 ## Import enwiki
 
@@ -526,9 +526,9 @@ zcat enwiki-current-cirrussearch-general.json.gz | parallel --pipe -L 2 -N 2000 
 
 ```
 
-Yikes! That's like a 150 GB one liner! Hopefully, it will be enough to get us going. Probably will end up doing it via python? I dunno.
+Yikes! That's like a 150 GB one liner! Hopefully, it will be enough to get us going. Probably will end up doing it via python? I don't know.
 
-Let's give it a shot. I already unzipped the json dump, so change that but otherwise the same:
+Let's give it a shot. I already unzipped the JSON dump, so change that but otherwise the same:
 
 ```text
 cat enwiki-20240325-cirrussearch-content.json | parallel --pipe -L 2 -N 2000 -j3 'curl -s http://localhost:9200/enwiki/_bulk --data-binary @- > /dev/null'
@@ -548,9 +548,9 @@ parallel: Warning: A record was longer than 1363150. Increasing to --blocksize 1
 parallel: Warning: A record was longer than 1772096. Increasing to --blocksize 2303726.
 ```
 
-And then started humming away. Checking the interfaces with bmon tells me there is data moving: bond0 is transmitting ~120 MB/sec from the RAID array (where the JSON file is located) and lo is seeing concurrent RX TX of 100-130 MB/sec. We can do sequential read from the array faster than that via the bond, but I think lo is limiting the transfer speed? Weird, quick search says that probably should not be the case. Not sure what to think about that. For now I'm OK with being limited a just better than gigabit speed for this transfer. Probably won't be doing it that often anyway. Looks like it's using about 12 GB system memory and only a few percent of CPU. So, for 150 GB at ~120 MB/sec., should take like 20 min.
+And then started humming away. Checking the interfaces with bmon tells me there is data moving: bond0 is transmitting ~120 MB/sec from the RAID array (where the JSON file is located) and lo is seeing concurrent RX TX of 100-130 MB/sec. We can do sequential read from the array faster than that via the bond, but I think lo is limiting the transfer speed? Weird, quick search says that probably should not be the case. Not sure what to think about that. For now, I'm OK with being limited a just better than gigabit speed for this transfer. Probably won't be doing it that often anyway. Looks like it's using about 12 GB system memory and only a few percent of CPU. So, for 150 GB at ~120 MB/sec., should take like 20 min.
 
-OK, yep - about 15 min and it finished cleanly - no additional output from the cat command.
+OK, yep - about 15 min, and it finished cleanly - no additional output from the cat command.
 
 ## Test out python client
 
@@ -600,7 +600,7 @@ $ python search.py
 
 ```
 
-OK, well - I don't see our data. I think we maybe should load the data in with python? Guessing we do have to create an index first. Problem there is - we have a 150 GB JSON file that definitely won't fit in system memory. Sounds like we can use ijson to stream it like this:
+OK, well - I don't see our data. I think we maybe should load the data in with python? Guessing we do have to create an index first. Problem there is - we have a 150 GB JSON file that definitely won't fit in system memory. Sounds like we can use JSON to stream it like this:
 
 ```python
 import ijson
@@ -616,12 +616,12 @@ with open('large_file.json', 'r') as file:
         print(item)
 ```
 
-No joy - ijson complains about garbage in the file. Think we have two options here:
+No joy - JSON complains about garbage in the file. Think we have two options here:
 
-1. Get the dump in XML or SQL and process it ourselves - this will give the most control but will also probably be a pain in the butt. There are a large number of files/formats avalible and figuring out what to download and how to use it would take some effort.
+1. Get the dump in XML or SQL and process it ourselves - this will give the most control but will also probably be a pain in the butt. There are many files/formats available and figuring out what to download and how to use it would take some effort.
 2. Learn how to properly use the CirrusSearch dump
 
-After some quick reading, option one seems tractable - we would have to write and xml parser and probably parallelize it - similarly to how we build the PubSum SQL database. There is more writing on this than the CirrusSearch dumps. See the following:
+After some quick reading, option one seems tractable - we would have to write and XML parser and probably parallelize it - similarly to how we build the PubSum SQL database. There is more writing on this than the CirrusSearch dumps. See the following:
 
 1. <https://jamesthorne.com/blog/processing-wikipedia-in-a-couple-of-hours>
 2. <https://dev.to/tobiasjc/understanding-the-wikipedia-dump-11f1>

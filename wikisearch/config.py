@@ -2,6 +2,17 @@
 command line arguments. This file exists to collect defaults
 in one, easy-to-read place.'''
 
+# Index settings and parameters
+INDEX_TYPE='neural' # or keyword
+
+# Ingest pipeline
+
+# Model is DistilBERT set up via the OpenSearch dashboard dev tools
+# for more info. see 04-OpenSearch_neural_search.md under /notes
+MODEL_ID='oKFpWpIBgWKaVuCy3vi8'
+NLP_INGEST_PIPELINE_DESCRIPTION='An NLP ingest pipeline'
+NLP_INGEST_PIPELINE_ID='nlp_ingest_pipeline'
+
 # Number of workers to start for parsing documents
 XML_PARSE_WORKERS=15
 CS_PARSE_WORKERS=1

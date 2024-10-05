@@ -4,6 +4,7 @@ and related helper functions.'''
 from __future__ import annotations
 import time
 from opensearchpy import OpenSearch
+import wikisearch.config as config
 
 
 def write_file(
@@ -103,6 +104,25 @@ def initialize_index(index_name: str) -> None:
 
     client=start_client()
 
+    # Create a NLP ingest pipeline for the index if needed
+    if config.INDEX_TYPE == 'neural':
+
+        pipeline_body={
+            'description': config.NLP_INGEST_PIPELINE_DESCRIPTION,
+            'processors': [
+                {
+                    'text_embedding': {
+                        'model_id': config.MODEL_ID,
+                        'field_map': {
+                        'text': 'text_embedding'
+                        }
+                    }
+                }
+            ]
+        }
+
+        _=client.ingest.put_pipeline(config.NLP_INGEST_PIPELINE_ID, pipeline_body)
+
     # Delete the index we are trying to create if it exists
     if client.indices.exists(index=index_name):
         _=client.indices.delete(index=index_name)
@@ -111,13 +131,45 @@ def initialize_index(index_name: str) -> None:
     if client.indices.exists(index=index_name) is False:
 
         # Create index
-        index_body={
-            'settings': {
-                'index': {
-                    'number_of_shards': 3 # Generic advice is 10-50 GB of data per shard
+        if config.INDEX_TYPE == 'neural':
+
+            index_body={
+                "settings": {
+                    'number_of_shards': 3,
+                    "index.knn": 'true',
+                    "default_pipeline": config.NLP_INGEST_PIPELINE_ID
+                },
+                "mappings": {
+                    "properties": {
+                    "id": {
+                        "type": "text"
+                    },
+                    "text_embedding": {
+                        "type": "knn_vector",
+                        "dimension": 768,
+                        "method": {
+                        "engine": "lucene",
+                        "space_type": "l2",
+                        "name": "hnsw",
+                        "parameters": {}
+                        }
+                    },
+                    "text": {
+                        "type": "text"
+                    }
+                    }
                 }
             }
-        }
+
+        elif config.INDEX_TYPE == 'keyword':
+
+            index_body={
+                'settings': {
+                    'index': {
+                        'number_of_shards': 3 # Generic advice is 10-50 GB of data per shard
+                    }
+                }
+            }
 
         _=client.indices.create(index_name, body=index_body)
 
