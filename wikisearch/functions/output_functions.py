@@ -140,8 +140,7 @@ def bulk_index_articles(
                     # Empty the list of articles to collect the next batch
                     incoming_articles = []
 
-                # If we catch an connection timeout, sleep for a bit and
+                # If we catch an connection timeout or transport error, sleep for a bit and
                 # don't clear the cached articles before continuing the loop
-                except exceptions.ConnectionTimeout:
-
+                except (exceptions.ConnectionTimeout, exceptions.TransportError):
                     time.sleep(10)
