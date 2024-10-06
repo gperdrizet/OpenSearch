@@ -108,18 +108,32 @@ def initialize_index(index_name: str) -> None:
     if config.INDEX_TYPE == 'neural':
 
         pipeline_body={
-            'description': config.NLP_INGEST_PIPELINE_DESCRIPTION,
-            'processors': [
+            "description": config.NLP_INGEST_PIPELINE_DESCRIPTION,
+            "processors": [
                 {
-                    'text_embedding': {
-                        'model_id': config.MODEL_ID,
-                        'field_map': {
-                        'text': 'text_embedding'
-                        }
+                "text_chunking": {
+                    "algorithm": {
+                    "fixed_token_length": {
+                        "token_limit": 512,
+                        "overlap_rate": 0.2,
+                        "tokenizer": "standard"
+                    }
+                    },
+                    "field_map": {
+                    "text": "text_chunk"
                     }
                 }
+                },
+                {
+                "text_embedding": {
+                    "model_id": config.MODEL_ID,
+                    "field_map": {
+                    "text_chunk": "text_chunk_embedding"
+                    }
+                }
+                }
             ]
-        }
+            }
 
         _=client.ingest.put_pipeline(config.NLP_INGEST_PIPELINE_ID, pipeline_body)
 
@@ -135,28 +149,33 @@ def initialize_index(index_name: str) -> None:
 
             index_body={
                 "settings": {
-                    'number_of_shards': 3,
+                    "number_of_shards": 3,
                     "index.knn": 'true',
                     "default_pipeline": config.NLP_INGEST_PIPELINE_ID
                 },
                 "mappings": {
                     "properties": {
-                    "id": {
-                        "type": "text"
-                    },
-                    "text_embedding": {
-                        "type": "knn_vector",
-                        "dimension": 768,
-                        "method": {
-                        "engine": "lucene",
-                        "space_type": "l2",
-                        "name": "hnsw",
-                        "parameters": {}
+                        "title": {
+                            "type": "text"
+                        },
+                        "text": {
+                            "type": "text"
+                        },
+                        "text_chunk_embedding": {
+                            "type": "nested",
+                            "properties": {
+                                "knn": {
+                                    "type": "knn_vector",
+                                    "dimension": 768,
+                                    "method": {
+                                        "engine": "lucene",
+                                        "space_type": "l2",
+                                        "name": "hnsw",
+                                        "parameters": {}
+                                    }
+                                }
+                            }
                         }
-                    },
-                    "text": {
-                        "type": "text"
-                    }
                     }
                 }
             }

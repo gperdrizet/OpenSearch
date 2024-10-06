@@ -14,7 +14,7 @@ import wikisearch.functions.output_functions as output_funcs
 def run(
     input_stream: Union[GzipFile, BZ2File], # type: ignore
     stream_reader: Callable,
-    reader_instance: Union[XMLReader,CirrusSearchReader], # type: ignore
+    reader_instance: Union[XMLReader, CirrusSearchReader], # type: ignore
     parser_function: Callable,
     args: dict
 ) -> None:

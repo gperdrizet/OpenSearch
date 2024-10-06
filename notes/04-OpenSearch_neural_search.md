@@ -53,6 +53,7 @@ POST /_plugins/_ml/model_groups/_register
   "name": "NLP_model_group",
   "description": "A model group for NLP models"
 }
+```
 
 Response:
 
@@ -102,15 +103,6 @@ Once the task is complete, you should receive output like this:
   "create_time": 1728093739666,
   "last_update_time": 1728093777611,
   "is_async": true
-}
-```
-
-Response:
-
-```text
-{
-  "task_id": "nqFnWpIBgWKaVuCy3PgJ",
-  "status": "CREATED"
 }
 ```
 
@@ -242,7 +234,7 @@ PUT /_ingest/pipeline/nlp-ingest-pipeline
       "text_embedding": {
         "model_id": "oKFpWpIBgWKaVuCy3vi8",
         "field_map": {
-          "text": "passage_embedding"
+          "text": "embedding"
         }
       }
     }
@@ -250,32 +242,160 @@ PUT /_ingest/pipeline/nlp-ingest-pipeline
 }
 ```
 
-Let's do that as part of index initialization (helper_funcs.initialize_index()). We also need to change how we are initializing the index. The tutorial gives the following:
+This will tell the model to map the 'text' field from our incoming documents to the 'embedding' field in the index. We also need to chunk the documents into passages of 512 tokens, otherwise distillBERT chokes. We can do that by adding a text chunking processor to the ingest pipeline above. More information can be found in the [text chunking tutorial](https://opensearch.org/docs/latest/search-plugins/text-chunking/). Here is our updated input pipeline:
+
+```text
+PUT _ingest/pipeline/nlp-ingest-pipeline
+{
+  "description": "An NLP ingest pipeline",
+  "processors": [
+    {
+      "text_chunking": {
+        "algorithm": {
+          "fixed_token_length": {
+            "token_limit": 512,
+            "overlap_rate": 0.2,
+            "tokenizer": "standard"
+          }
+        },
+        "field_map": {
+          "text": "text_chunk"
+        }
+      }
+    },
+    {
+      "text_embedding": {
+        "model_id": "oKFpWpIBgWKaVuCy3vi8",
+        "field_map": {
+          "text_chunk": "text_chunk_embedding"
+        }
+      }
+    }
+  ]
+}
+```
+
+Let's do that as part of index initialization (helper_funcs.initialize_index()). We also need to change how we are initializing the index. The tutorial gives the following example:
 
 ```text
 PUT /my-nlp-index
 {
   "settings": {
-    "index.knn": true,
-    "default_pipeline": "nlp-ingest-pipeline"
+    "index": {
+      "knn": true
+    }
   },
   "mappings": {
     "properties": {
-      "id": {
-        "type": "text"
-      },
-      "passage_embedding": {
-        "type": "knn_vector",
-        "dimension": 768,
-        "method": {
-          "engine": "lucene",
-          "space_type": "l2",
-          "name": "hnsw",
-          "parameters": {}
-        }
-      },
       "text": {
         "type": "text"
+      },
+      "text_chunk_embedding": {
+        "type": "nested",
+        "properties": {
+          "knn": {
+            "type": "knn_vector",
+            "dimension": 768
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+We can easily adapt that by changing the 'id' field to 'title' to match what we are already doing. We also need to add a nested field for the chunked embeddings. Here is what our updated initialization stanza looks like:
+
+```text
+{
+"settings": {
+    "number_of_shards": 3,
+    "index.knn": 'true',
+    "default_pipeline": config.NLP_INGEST_PIPELINE_ID
+},
+"mappings": {
+    "properties": {
+        "title": {
+            "type": "text"
+        },
+        "text": {
+            "type": "text"
+        },
+        "text_chunk_embedding": {
+            "type": "nested",
+            "properties": {
+                "knn": {
+                    "type": "knn_vector",
+                    "dimension": 768,
+                    "method": {
+                        "engine": "lucene",
+                        "space_type": "l2",
+                        "name": "hnsw",
+                        "parameters": {}
+                    }
+                }
+            }
+        }
+    }
+}
+}
+```
+
+Let's add that and a flag in configuration file to switch between that and the old way.
+
+### 3.2. Add documents
+
+Tutorial gives the following example command to add a document.
+
+```text
+PUT /my-nlp-index/_doc/1
+{
+  "text": "A West Virginia university women 's basketball team , officials , and a small gathering of fans are in a West Virginia arena .",
+  "id": "4319130149.jpg"
+}
+```
+
+All we need to do is adapt to our field names and we are good to go.
+
+## 4. Search
+
+The tutorial describes a semantic only search and a hybrid keyword and semantic search. Let's set up a new test script using just the semantic search to start with.
+
+```text
+GET /my-nlp-index/_search
+{
+  "_source": {
+    "excludes": [
+      "passage_embedding"
+    ]
+  },
+  "query": {
+    "neural": {
+      "passage_embedding": {
+        "query_text": "wild west",
+        "model_id": "aVeif4oB5Vm0Tdw8zYO2",
+        "k": 5
+      }
+    }
+  }
+}
+```
+
+Translating that for our index:
+
+```text
+{
+  "_source": {
+    "excludes": [
+      "text_chunk_embedding"
+    ]
+  },
+  "query": {
+    "neural": {
+      "text_chunk_embedding": {
+        "query_text": q,
+        "model_id": config.MODEL_ID,,
+        "k": 5
       }
     }
   }

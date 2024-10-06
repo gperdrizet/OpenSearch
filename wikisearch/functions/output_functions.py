@@ -1,8 +1,6 @@
 '''Functions for handling output of data to files or indexing into OpenSearch'''
 
 from __future__ import annotations
-import os
-import glob
 import time
 from opensearchpy import exceptions
 import wikisearch.functions.helper_functions as helper_funcs
@@ -53,12 +51,6 @@ def write_file(
     # Construct output path
     output_path=f'wikisearch/data/articles/{article_source}'
 
-    # Clear the output directory
-    files=glob.glob(f'{output_path}/*')
-
-    for f in files:
-        os.remove(f)
-
     # Counter to track how many done signals we have received
     done_count=0
 
@@ -94,11 +86,13 @@ def write_file(
             with open(output, 'w', encoding='utf-8') as text_file:
                 text_file.write(f'{title}\n{content}')
 
+
 def bulk_index_articles(
     output_queue: multiprocessing.Queue, # type: ignore
     batch_size: int,
     parse_workers: int
 ) -> None:
+    
     '''Batch index documents and insert in to OpenSearch from 
     parser output queue'''
 

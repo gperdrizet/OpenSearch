@@ -18,8 +18,8 @@ def parse_arguments() -> argparse.Namespace:
     # Add argument for task to run
     parser.add_argument(
         'task',
-        choices=['process_xml_dump', 'process_cs_dump', 'make_sample_data', 'test_search'],
-        help='[update_xml_dump, process_xml_dump, process_cs_dump, make_sample_data, test_search]',
+        choices=['process_xml_dump', 'process_cs_dump', 'make_sample_data', 'test_keyword_search', 'test_semantic_search'],
+        help='[update_xml_dump, process_xml_dump, process_cs_dump, make_sample_data, test_search, test_semantic_search]',
         metavar='TASK_NAME_STRING'
     )
 
@@ -71,7 +71,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         '--upsert_batch',
         required=False,
-        default=100,
+        default=config.BULK_BATCH_SIZE,
         help='number of documents per bulk upsert batch',
         metavar=''
     )
@@ -81,7 +81,7 @@ def parse_arguments() -> argparse.Namespace:
         '--output',
         required=False,
         choices=['file', 'opensearch'],
-        default='file',
+        default='opensearch',
         help='where to output parsed articles: [file, opensearch]',
         metavar=''
     )
@@ -91,8 +91,8 @@ def parse_arguments() -> argparse.Namespace:
         '--status_monitor',
         required=False,
         choices=['True', 'False'],
-        default='True',
-        help='Print status monitor output: [True, False]',
+        default='False',
+        help='print status monitor output: [True, False]',
         metavar=''
     )
 

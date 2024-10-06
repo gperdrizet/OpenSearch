@@ -4,7 +4,8 @@ from bz2 import BZ2File
 from gzip import GzipFile
 
 from wikisearch import process_dump
-from wikisearch import test_search
+from wikisearch import test_keyword_search
+from wikisearch import test_semantic_search
 from wikisearch import make_sample
 
 from wikisearch.classes.xml_reader import XMLReader
@@ -49,9 +50,13 @@ if __name__ == '__main__':
             args=args
         )
 
-    # Runs interactive command line search utility
-    elif args.task == 'test_search':
-        test_search.run(args.index)
+    # Runs interactive command line keyword search utility
+    elif args.task == 'test_keyword_search':
+        test_keyword_search.run(args.index)
+
+    # Runs interactive command line semantic search utility
+    elif args.task == 'test_semantic_search':
+        test_semantic_search.run(args.index)
 
     # Takes a small (n=5000) sample of a dump file and saves it
     # for rapid prototyping/testing
