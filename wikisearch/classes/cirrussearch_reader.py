@@ -5,7 +5,7 @@ import json
 class CirrusSearchReader():
     '''Class to XML objects from CirrusSearch dump.'''
 
-    def __init__(self, parse_workers):
+    def __init__(self, parse_workers: int):
 
         # Add empty callback function
         self.callback=self._callback_placeholder
@@ -44,7 +44,7 @@ class CirrusSearchReader():
         # If it's not the done signal, process it
         else:
 
-            # Convert line to dict
+            # Convert line to dictionary
             line=json.loads(line)
 
             # Add it to the buffer
@@ -54,10 +54,10 @@ class CirrusSearchReader():
             # flush it
             if len(self.buffer) == 2:
 
+                self.flush_buffer()
+
                 # Update article count
                 self.status_count[1] += 1
-
-                self.flush_buffer()
 
     def flush_buffer(self):
         '''Sends contents of buffer, along with count of articles

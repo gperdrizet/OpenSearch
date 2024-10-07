@@ -41,7 +41,7 @@ def parse_cirrussearch_article(
             upsert_content['doc']={}
             upsert_content['doc']['title']=content['title']
             upsert_content['doc']['text']=content['text']
-            upsert_content['doc_as_upsert']='true'
+            #upsert_content['doc_as_upsert']='true'
 
             # Put the result into the output queue
             output_queue.put((header, upsert_content))

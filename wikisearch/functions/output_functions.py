@@ -3,6 +3,7 @@
 from __future__ import annotations
 import time
 from opensearchpy import exceptions
+from wikisearch import config
 import wikisearch.functions.helper_functions as helper_funcs
 
 def output_selector(
@@ -28,7 +29,8 @@ def output_selector(
         _=write_file(
             output_queue=output_queue,
             article_source=article_source,
-            parse_workers=args.parse_workers
+            parse_workers=args.parse_workers,
+            resume=args.resume
         )
     
     # Send the output to the OpenSearch bulk indexer
@@ -37,7 +39,8 @@ def output_selector(
         _=bulk_index_articles(
             output_queue=output_queue,
             batch_size=args.upsert_batch,
-            parse_workers=args.parse_workers
+            parse_workers=args.parse_workers,
+            resume=args.resume
         )
 
 def write_file(
@@ -119,7 +122,7 @@ def bulk_index_articles(
             if done_count == parse_workers:
                 return
 
-        # If the queue item is not a done signal, process it
+        # If the queue item is not a done signal add it to batch
         else:
 
             # Add it to batch
