@@ -219,7 +219,7 @@ The model state should now show up as 'deployed':
 
 ## 3. Data ingest
 
-Now we need to start adapting this to our wikipedia parse/insert code. This whole thing will need a refactor to make it modular. The ideal case would be to completely separate all of the OpenSearch stuff from the Wikipedia specific stuff, that way it's reusable for other text sources.
+Now we need to start adapting this to our Wikipedia parse/insert code. This whole thing will need a refactor to make it modular. The ideal case would be to completely separate all the OpenSearch stuff from the Wikipedia specific stuff, that way it's reusable for other text sources.
 
 ### 3.1. Neural search ingest pipeline
 
@@ -355,7 +355,7 @@ PUT /my-nlp-index/_doc/1
 }
 ```
 
-All we need to do is adapt to our field names and we are good to go.
+All we need to do is adapt to our field names, and we are good to go.
 
 ## 4. Search
 
@@ -401,3 +401,5 @@ Translating that for our index:
   }
 }
 ```
+
+OK, that's enough. We learned a lot, but his is getting out of hand, we are trying to do too many things. Let's start a new branch and work on a semantic search only version of this focusing on modularity of the ingest pipeline so that we can generalize it to other data sources in the future.
