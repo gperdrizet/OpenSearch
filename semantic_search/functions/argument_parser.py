@@ -24,6 +24,15 @@ def parse_arguments() -> argparse.Namespace:
         metavar='DATA_SOURCE'
     )
 
+    # Argument to specify Luigi task to force start execution from
+    parser.add_argument(
+        '--force_from',
+        required=False,
+        default=config.DEFAULT_FORCE_START,
+        help='force Luigi pipeline to start from a specific task',
+        metavar='DATA_SOURCE'
+    )
+
     args=parser.parse_args()
 
     return args

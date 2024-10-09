@@ -1,18 +1,23 @@
 '''Contains extra functions related to Luigi data pipeline.'''
 
+# Standard imports
 import pathlib
 
-def force_after(task_name: str = None):
+# Internal imports
+import semantic_search.configuration as config
+
+def force_from(data_source: str, task_name: str = None):
     '''Forces all to be re-run starting with given task by removing their output'''
 
     # Dictionary of string task names and their output files
     tasks = {
-
+        'ExtractRawData': f'{config.DATA_PATH}/{data_source}/{config.EXTRACTION_SUMMARY}'
     }
 
-    # Loop on the task dictionary
-    remove_output = False
+    # Flag to determine if we remove each file or not
+    remove_output=False
 
+    # Loop on the task dictionary
     for task, output_file in tasks.items():
 
         # When we find the task, flip the value of remove_output to True

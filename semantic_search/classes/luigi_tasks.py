@@ -12,7 +12,7 @@ import semantic_search.functions.extract_transform_load as etl_funcs
 
 class ExtractRawData(luigi.Task):
     '''Runs source specific data extraction function. Reads raw data,
-    extracts text and saves in batches'''
+    extracts text and saves in batches.'''
 
     # Take the data source string as a parameter
     data_source=luigi.Parameter()

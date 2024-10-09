@@ -16,8 +16,11 @@ DEFAULT_DATA_SOURCE='wikipedia'
 
 # Option to force Luigi pipeline to start from a specific task.
 # Set 'None' to use default Luigi behavior where we start from the
-# last completed task
-FORCE_START='None'
+# last completed task. Can be overridden with command line argument
+DEFAULT_FORCE_START='None'
 
 # Luigi task summary files
 EXTRACTION_SUMMARY='extraction_summary.log'
+
+# Intermediate data files
+BATCHED_TEXT='batched_text.h5'
