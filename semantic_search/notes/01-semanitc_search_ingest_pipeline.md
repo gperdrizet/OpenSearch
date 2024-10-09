@@ -22,3 +22,5 @@ Version 1.0 of this project has become kind of a mess. It is trying to do too ma
 4. **Indexer**: Standard [[OpenSearch]] neural/semantic search ingest following the [Neural Search Tutorial](https://opensearch.org/docs/latest/search-plugins/neural-search-tutorial#step-1a-choose-a-language-model)
 
 Much better. This should be vastly more simple. To use a different data source all we will need to do is set up a configuration file and make a modified reader module for that source.
+
+### Update
