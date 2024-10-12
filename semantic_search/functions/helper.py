@@ -1,5 +1,5 @@
 '''Helper functions; mostly stuff that is awkwardly long to 
-have in a notebooks and is waiting to be put somewhere else.'''
+have in notebooks and is waiting to be put somewhere else.'''
 
 def fix_bad_symbols(source_string: str) -> str:
     '''Fixes some weird punctuation and symbols left over after
