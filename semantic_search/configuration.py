@@ -11,6 +11,9 @@ DATA_PATH=f'{PROJECT_ROOT_PATH}/data'
 RAW_DATA_PATH=f'{DATA_PATH}/raw_data'
 DATA_SOURCE_CONFIG_PATH=f'{PROJECT_ROOT_PATH}/data_source_configurations'
 
+NLTK_ASSET_DIR=f'{PROJECT_ROOT_PATH}/.venv/lib/nltk_data'
+TORCH_CACHE='/mnt/fast_scratch/'
+
 # Default data source to process, can be overridden with command line argument
 DEFAULT_DATA_SOURCE='wikipedia'
 

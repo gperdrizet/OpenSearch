@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 # PyPI imports
-import luigi
+import luigi # type: ignore
 
 # Internal imports
 import semantic_search.configuration as config
