@@ -14,6 +14,10 @@ DATA_SOURCE_CONFIG_PATH=f'{PROJECT_ROOT_PATH}/data_source_configurations'
 NLTK_ASSET_DIR=f'{PROJECT_ROOT_PATH}/.venv/lib/nltk_data'
 TORCH_CACHE='/mnt/fast_scratch/'
 
+# Sematic chunking parameters
+TOKENIZER_NAME='bert-base-uncased'
+MAX_TOKENS=512
+
 # Default data source to process, can be overridden with command line argument
 DEFAULT_DATA_SOURCE='wikipedia'
 

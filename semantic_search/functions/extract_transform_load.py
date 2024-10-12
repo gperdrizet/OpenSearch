@@ -4,18 +4,20 @@
 import time
 import json
 import pathlib
+import multiprocessing as mp
 from gzip import GzipFile
 
 # PyPI imports
 import h5py
 import mwparserfromhell
+from semantic_text_splitter import TextSplitter
+from tokenizers import Tokenizer
 
 # Internal imports
 import semantic_search.configuration as config
 
 def extract_data(data_source: str) -> dict:
-    '''Wrapper function to call correct task specific data
-    extractor function'''
+    '''Wrapper function to call correct task specific data extractor function.'''
 
     # Load the data source configuration
     source_config_path=f'{config.DATA_SOURCE_CONFIG_PATH}/{data_source}.json'
@@ -47,58 +49,62 @@ def wikipedia_extractor(source_config: dict) -> dict:
     gzip_data_file_path=f"{config.RAW_DATA_PATH}/{source_config['raw_data_file']}"
     file=GzipFile(gzip_data_file_path)
 
-    # Loop on the line from the input file stream and accumulate batches
-    line_count=0
-    batch_count=0
-    batch=[]
+    # Set number of workers to one less than the CPU count and create the pool
+    n_workers=mp.cpu_count() - 1
+    pool=mp.Pool(processes=n_workers)
 
+    # Counters and accumulators for batch loop
+    line_count=0
+    batch_count=1
+    batch=[]
+    batches=[]
+
+    # Start the timer
     start_time = time.time()
 
+    # Loop on the lines from the input file stream and accumulate batches
     for line in file:
 
         line_count+=1
 
         # Only pull text from article records (every other record is a metadata header)
         if line_count % 2 == 0:
-            record=json.loads(line)
+            batch.append(line)
 
-            text=record['source_text']
-
-            # Convert source string to wikicode
-            wikicode=mwparserfromhell.parse(text)
-
-            # Strip garbage out of wikicode source
-            source_string=wikicode.strip_code(
-                normalize=True,
-                collapse=True,
-                keep_template_params=False
-            )
-
-            # Remove extra sections from the end of the document
-            source_string=remove_extra_sections(source_string)
-
-            # Do some string replacements
-            source_string=fix_bad_symbols(source_string)
-
-            # Clean up newlines
-            source_string=clean_newlines(source_string)
-
-            # Get rid of image thumbnail lines and leading spaces
-            source_string=remove_thumbnails(source_string)
-
-            batch.append(source_string)
-
-        # Once the batch is full, save it and reset
+        # Once the batch is full, add to this round's batches and reset
         if len(batch) == source_config['batch_size']:
-            batch_group.create_dataset(str(batch_count), data=batch)
-            batch_count+=1
+            batches.append(batch)
             batch=[]
 
-    # Once we have looped trough the file, save any remaining records
-    # as one last batch
-    if len(batch) != 0:
-        batch_group[str(batch_count)]=batch
+        # Once we have a batch for every worker, start the round
+        if len(batches) == n_workers:
+            print(f'Have {len(batches)} batches: starting round')
 
+            # Holder for results from workers
+            worker_results=[]
+
+            # Submit each batch to a worker
+            for batch in batches:
+                worker_result=pool.apply_async(extract_wikipedia_text, (batch,))
+                worker_results.append(worker_result)
+
+            # Collect the results from the workers
+            results=[worker_result.get() for worker_result in worker_results]
+
+            # Save each result as a batch in the hdf5 file
+            for result in results:
+                batch_group.create_dataset(str(batch_count), data=result)
+                batch_count+=1
+
+            # Stop if we have reached the user requested number of batches
+            if source_config['num_batches'] != 'all':
+                if source_config['num_batches'] <= batch_count:
+                    break
+
+            # Empty the batches for the next round
+            batches=[]
+
+    # Stop the timer after the last round finishes
     dT=time.time() - start_time
 
     # Add some stuff the the summary
@@ -113,6 +119,64 @@ def wikipedia_extractor(source_config: dict) -> dict:
     output.close()
 
     return extraction_summary
+
+
+def extract_wikipedia_text(lines: list) -> list:
+    '''Worker function to do text extraction and cleaning on Wikipedia CirrusSearch
+    dump source. Takes a batch of lines from file stream, returns list of text chunks.'''
+
+    # Fire up the semantic chunk splitter
+    tokenizer=Tokenizer.from_pretrained(config.TOKENIZER_NAME)
+    splitter=TextSplitter.from_huggingface_tokenizer(tokenizer, config.MAX_TOKENS)
+
+    # Holder for result
+    cleaned_texts=[]
+
+    # Loop on input lines
+    for line in lines:
+
+        # Load record dictionary from JSON line
+        record=json.loads(line)
+
+        # Get the text from the record, catching key error
+        # in case this record doesn't have text for some reason
+        try:
+
+            # Only parse namespace 0 articles which are not disambiguation
+            if record['namespace'] == 0 and 'Disambiguation pages' not in record['category']:
+
+                # Convert source string to wikicode
+                wikicode=mwparserfromhell.parse(record['source_text'])
+
+                # Strip garbage out of wikicode source
+                source_string=wikicode.strip_code(
+                    normalize=True,
+                    collapse=True,
+                    keep_template_params=False
+                )
+
+                # Remove extra sections from the end of the document
+                source_string=remove_extra_sections(source_string)
+
+                # Do some string replacements
+                source_string=fix_bad_symbols(source_string)
+
+                # Clean up newlines
+                source_string=clean_newlines(source_string)
+
+                # Get rid of image thumbnail lines and leading spaces
+                source_string=remove_thumbnails(source_string)
+
+                # Split the text into chunks
+                chunks=splitter.chunks(source_string)
+
+                # Add to results
+                cleaned_texts.extend(chunks)
+
+        except KeyError:
+            pass
+
+    return cleaned_texts
 
 
 def fix_bad_symbols(source_string: str) -> str:
