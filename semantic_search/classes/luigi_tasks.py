@@ -88,3 +88,44 @@ class TransformData(luigi.Task):
         # Save the transform summary to disk
         with self.output().open('w') as output_file:
             json.dump(transform_summary, output_file)
+
+
+class LoadData(luigi.Task):
+    '''Loads prepared data into OpenSearch KNN vector database for semantic search.'''
+
+    # Take the data source string as a parameter
+    data_source=luigi.Parameter()
+
+    def requires(self):
+        return TransformData(self.data_source)
+
+    def load_data_source_config(self):
+        '''Loads data source specific configuration dictionary.'''
+
+        # Load the data source configuration
+        source_config_path=f'{config.DATA_SOURCE_CONFIG_PATH}/{self.data_source}.json'
+
+        with open(source_config_path, encoding='UTF-8') as source_config_file:
+            source_config=json.load(source_config_file)
+
+        return source_config
+
+    def output(self):
+
+        # Construct output file name for extraction summary file
+        source_config=self.load_data_source_config()
+
+        load_summary_file=(f"{config.DATA_PATH}/"+
+            f"{source_config['output_data_dir']}/{config.LOAD_SUMMARY}")
+
+        # Define the load summary file as the target for this task
+        return luigi.LocalTarget(load_summary_file)
+
+    def run(self):
+
+        # Run the load
+        load_summary=etl_funcs.load_data(self.data_source)
+
+        # Save the load summary to disk
+        with self.output().open('w') as output_file:
+            json.dump(load_summary, output_file)

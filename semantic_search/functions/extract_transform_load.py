@@ -107,7 +107,31 @@ def transform_data(data_source: str) -> dict:
     # Add some stuff the the summary
     transform_summary['run_time_seconds']=dT
 
-    # Close the hdf5 file
+    # Close the hdf5s
+    input_data.close()
     output.close()
 
     return transform_summary
+
+
+def load_data(data_source: str) -> dict:
+    '''Loads prepared data into OpenSearch KNN vector database for semantic search.'''
+
+    # Load the data source configuration
+    source_config_path=f'{config.DATA_SOURCE_CONFIG_PATH}/{data_source}.json'
+
+    with open(source_config_path, encoding='UTF-8') as source_config_file:
+        source_config=json.load(source_config_file)
+
+    # Start the load summary with the data from the source configuration
+    load_summary=source_config
+
+    # Open the input
+    input_file_path=(f"{config.DATA_PATH}/{source_config['output_data_dir']}" +
+        f'/{config.TRANSFORMED_TEXT}')
+
+    input_data=h5py.File(input_file_path, 'r')
+
+    print(f'Input data is: {type(input_data)}')
+
+    return load_summary

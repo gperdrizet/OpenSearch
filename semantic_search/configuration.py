@@ -29,6 +29,7 @@ DEFAULT_FORCE_START='None'
 # Luigi task summary files
 EXTRACTION_SUMMARY='1.1-extraction_summary.log'
 TRANSFORM_SUMMARY='2.1-transform_summary.log'
+LOAD_SUMMARY='3.1-load_summary.log'
 
 # Intermediate data files
 BATCHED_TEXT='1.2-extracted_text.h5'
