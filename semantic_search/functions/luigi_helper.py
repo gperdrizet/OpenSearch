@@ -11,7 +11,8 @@ def force_from(data_source: str, task_name: str = None):
 
     # Dictionary of string task names and their output files
     tasks = {
-        'ExtractRawData': f'{config.DATA_PATH}/{data_source}/{config.EXTRACTION_SUMMARY}'
+        'ExtractRawData': f'{config.DATA_PATH}/{data_source}/{config.EXTRACTION_SUMMARY}',
+        'TransformData': f'{config.DATA_PATH}/{data_source}/{config.TRANSFORM_SUMMARY}'
     }
 
     # Flag to determine if we remove each file or not

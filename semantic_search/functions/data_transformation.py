@@ -1,5 +1,40 @@
-'''Helper functions; mostly stuff that is awkwardly long to 
-have in notebooks and is waiting to be put somewhere else.'''
+'''Functions for data cleaning and chunking. Meant to be
+run by multiprocessing pool workers'''
+
+# PyPI imports
+from semantic_text_splitter import TextSplitter # pylint: disable = no-name-in-module
+from tokenizers import Tokenizer
+
+# Internal imports
+import semantic_search.configuration as config
+
+def clean_and_chunk(texts: list) -> list:
+    '''Cleans and chunks batch of text, returns list of chunks'''
+
+    # Fire up the semantic chunk splitter
+    tokenizer=Tokenizer.from_pretrained(config.TOKENIZER_NAME)
+    splitter=TextSplitter.from_huggingface_tokenizer(tokenizer, config.MAX_TOKENS)
+
+    # Holder for results
+    transformed_text=[]
+
+    # Loop on texts in the batch
+    for text in texts:
+
+        # Do some string replacements
+        text=fix_bad_symbols(text)
+
+        # Clean up newlines
+        text=clean_newlines(text)
+
+        # Split the text into chunks
+        chunks=splitter.chunks(text)
+
+        # Add the chunks to the result
+        transformed_text.extend(chunks)
+
+    return transformed_text
+
 
 def fix_bad_symbols(source_string: str) -> str:
     '''Fixes some weird punctuation and symbols left over after
@@ -36,7 +71,6 @@ def fix_bad_symbols(source_string: str) -> str:
     source_string=source_string.replace('۝', '')
     source_string=source_string.replace("\'", "'")
 
-
     # Need to do this one last, some of the above
     # replace-with-nothings leave double spaces
     source_string=source_string.replace('  ', ' ')
@@ -54,77 +88,5 @@ def clean_newlines(source_string: str) -> str:
     source_string=source_string.replace('\n\n\n', '\n\n')
     source_string=source_string.replace('\n\n\n', '\n')
     source_string=source_string.replace('\n\n\n', '\n\n')
-
-    return source_string
-
-
-def remove_thumbnails(source_string: str) -> str:
-    '''Removes thumbnail descriptor lines and cleans up any
-    lines with leading spaces'''
-
-    # Empty list for cleaned lines
-    cleaned_source_array=[]
-
-    # Split the source string on newlines
-    source_array=source_string.split('\n')
-
-    # Loop on the line array
-    for line in source_array:
-
-        # Only take lines that don't contain leftover HTML stuff
-        if 'thumb|' in line:
-            pass
-
-        elif 'scope="' in line:
-            pass
-
-        elif 'rowspan="' in line:
-            pass
-
-        elif 'style="' in line:
-            pass
-
-        # If we don't find any of the above, process the line
-        else:
-
-            # Check for lines that are not blank but start with space
-            # or other garbage
-            if len(line) > 1:
-
-                if line[0] == ' ':
-                    line=line[1:]
-
-                if line[:2] == '| ':
-                    line=line[2:]
-
-                if line[:2] == '! ':
-                    line=line[2:]
-
-                if line[:2] == '! ':
-                    line=line[2:]
-
-                if line[:2] == '|-':
-                    line=line[2:]
-
-                if line[:2] == '|}':
-                    line=line[2:]
-
-            # Add the cleaned line to the result
-            cleaned_source_array.append(line)
-
-    # Join the cleaned lines back to a string
-    source_string='\n'.join(cleaned_source_array)
-
-    return source_string
-
-
-def remove_extra_sections(source_string: str) -> str:
-    '''Remove extra sections from the end of the document by splitting 
-    on common headings only keeping the stuff before the split point'''
-
-    source_string=source_string.split('See also')[0]
-    source_string=source_string.split('References')[0]
-    source_string=source_string.split('External links')[0]
-    source_string=source_string.split('Notes')[0]
 
     return source_string

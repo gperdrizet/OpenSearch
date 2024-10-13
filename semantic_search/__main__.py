@@ -17,7 +17,7 @@ if __name__ == '__main__':
     # Parse command line arguments
     args=arg_parser.parse_arguments()
 
-    # Load the datasource configuration
+    # Load the data source configuration
     source_config_path=f'{config.DATA_SOURCE_CONFIG_PATH}/{args.data_source}.json'
 
     with open(source_config_path, encoding='UTF-8') as source_config_file:
@@ -31,8 +31,10 @@ if __name__ == '__main__':
 
     luigi.build(
         [
-            # Read raw data, extract, batch and save text
-            tasks.ExtractRawData(data_source=args.data_source)
+            # Extract and batch text from raw data
+            tasks.ExtractRawData(data_source=args.data_source),
+            # Clean and chunk text
+            tasks.TransformData(data_source=args.data_source)
         ],
         local_scheduler=True
     )

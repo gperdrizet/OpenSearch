@@ -27,7 +27,9 @@ DEFAULT_DATA_SOURCE='wikipedia'
 DEFAULT_FORCE_START='None'
 
 # Luigi task summary files
-EXTRACTION_SUMMARY='extraction_summary.log'
+EXTRACTION_SUMMARY='1.1-extraction_summary.log'
+TRANSFORM_SUMMARY='2.1-transform_summary.log'
 
 # Intermediate data files
-BATCHED_TEXT='batched_text.h5'
+BATCHED_TEXT='1.2-extracted_text.h5'
+TRANSFORMED_TEXT='2.2-transformed_text.h5'
