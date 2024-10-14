@@ -3,9 +3,6 @@
 # PyPI imports
 from opensearchpy import OpenSearch # pylint: disable = import-error
 
-# Internal imports
-import configuration as config
-
 ############################################################
 # OWikipedia data cleaning functions #######################
 ############################################################
@@ -162,7 +159,7 @@ def start_client() -> OpenSearch:
 
     return client
 
-def initialize_index(index_name: str) -> None:
+def initialize_index(index_name: str, index_body: dict) -> None:
 
     '''Set-up OpenSearch index. Deletes index if it already exists
     at run start. Creates new index for run.'''
@@ -175,32 +172,6 @@ def initialize_index(index_name: str) -> None:
 
     # Create the target index if it does not exist
     if client.indices.exists(index=index_name) is False:
-
-        index_body={
-            "settings": {
-                "number_of_shards": 3,
-                "index.knn": "true",
-                "default_pipeline": f'{config.INGEST_PIPELINE_ID}'
-            },
-            "mappings": {
-                "properties": {
-                    "text_embedding": {
-                        "type": "knn_vector",
-                        "dimension": 768,
-                        "method": {
-                        "engine": "lucene",
-                        "space_type": "l2",
-                        "name": "hnsw",
-                        "parameters": {}
-                        }
-                    },
-                    "text": {
-                        "type": "text"
-                    }
-                }
-            }
-        }
-
         _=client.indices.create(index_name, body=index_body)
 
     # Close client
