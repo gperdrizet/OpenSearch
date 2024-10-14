@@ -38,7 +38,7 @@ if __name__ == '__main__':
             # Clean and semantically chunk text
             tasks.TransformData(data_source=args.data_source),
             # Load data into OpenSearch KNN vector database
-            tasks.LoadData(data_source=args.data_data_source)
+            tasks.LoadData(data_source=args.data_source)
         ],
         local_scheduler=True
     )

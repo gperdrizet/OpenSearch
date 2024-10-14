@@ -8,10 +8,12 @@ import multiprocessing as mp
 
 # PyPI imports
 import h5py
+from opensearchpy import exceptions # pylint: disable = import-error
 
 # Internal imports
 import semantic_search.configuration as config
 import semantic_search.functions.data_transformation as transform_funcs
+import semantic_search.functions.opensearch_loader as loader_funcs
 from semantic_search.functions.wikipedia_extractor import wikipedia_extractor # pylint: disable = unused-import
 
 def extract_data(data_source: str) -> dict:
@@ -132,6 +134,83 @@ def load_data(data_source: str) -> dict:
 
     input_data=h5py.File(input_file_path, 'r')
 
-    print(f'Input data is: {type(input_data)}')
+    # Create the OpenSearch index
+    loader_funcs.initialize_index(source_config['target_index_name'])
+
+    # Initialize the OpenSearch client
+    client=loader_funcs.start_client()
+
+    # Count records
+    record_num=0
+
+    # Start the timer
+    start_time = time.time()
+
+    # Holder for formatted chunks to insert
+    chunks=[]
+
+    # Loop on the batches
+    for batch_num in input_data['batches']:
+
+        # Grab the batch from the hdf5 connection
+        batch=input_data[f'batches/{batch_num}']
+
+        # Strings come out of hdf5 as bytes, decode them
+        decoded_batch=[]
+
+        for text in batch:
+            decoded_batch.append(text.decode('utf-8'))
+
+        # Loop on chunks in batch
+        for chunk in decoded_batch:
+
+            # Create formatted dicts for the request and the
+            # content to send to open search
+            request_header={
+                'update': {
+                    '_index': data_source, # Data source string is also the index name
+                    '_id': record_num
+                }
+            }
+
+            chunks.append(request_header)
+
+            request_body={
+                'doc': {
+                    'text': chunk
+                },
+                'doc_as_upsert': 'true'
+            }
+
+            chunks.append(request_body)
+
+            # When the size of the chunk list reaches double the requested
+            # bulk insert batch size, upload it. Double because every record
+            # we are inserting becomes two list elements in chunks
+            if len(chunks) == 2 * config.BULK_INSERT_BATCH_SIZE:
+
+                # Insert, Catching any connection timeout errors from OpenSearch
+                try:
+
+                    # Do the insert
+                    _=client.bulk(chunks)
+
+                    # Empty the list of chunks to collect the next batch
+                    chunks = []
+
+                # If we catch an connection timeout or transport error, sleep for a bit and
+                # don't clear the cached articles before continuing the loop
+                except (exceptions.ConnectionTimeout, exceptions.TransportError):
+                    time.sleep(10)
+
+            record_num+=1
+
+    dT=time.time() - start_time # pylint: disable = invalid-name
+
+    # Add some stuff the the summary
+    load_summary['run_time_seconds']=dT
+
+    # Close the hdf5s
+    input_data.close()
 
     return load_summary

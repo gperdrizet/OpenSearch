@@ -18,6 +18,12 @@ TORCH_CACHE='/mnt/fast_scratch/'
 TOKENIZER_NAME='bert-base-uncased'
 MAX_TOKENS=512
 
+# OpenSearch neural search parameters
+MODEL_GROUP_ID='UcG3hZIBe4T97LPedcgx'
+MODEL_ID='S5-7hZIByzOSp7wU4wxw'
+INGEST_PIPELINE_ID='embedding-ingest-pipeline'
+BULK_INSERT_BATCH_SIZE=10
+
 # Default data source to process, can be overridden with command line argument
 DEFAULT_DATA_SOURCE='wikipedia'
 

@@ -10,8 +10,6 @@ from gzip import GzipFile
 # PyPI imports
 import h5py
 import mwparserfromhell
-from semantic_text_splitter import TextSplitter # pylint: disable = no-name-in-module
-from tokenizers import Tokenizer
 
 # Internal imports
 import semantic_search.configuration as config
