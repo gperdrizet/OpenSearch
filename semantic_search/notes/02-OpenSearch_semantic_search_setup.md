@@ -300,6 +300,35 @@ Response:
 }
 ```
 
+### 2.5. Tasks per node
+
+This setting allows running concurrent ML tasks. Be careful with memory - it's easy to cause crashes with this.
+
+```text
+PUT _cluster/settings
+{
+  "persistent": {
+    "plugins.ml_commons.max_ml_task_per_node": "16"
+  }
+}
+```
+
+Response:
+
+```text
+{
+  "acknowledged": true,
+  "persistent": {
+    "plugins": {
+      "ml_commons": {
+        "max_ml_task_per_node": "16"
+      }
+    }
+  },
+  "transient": {}
+}
+```
+
 ## 3. Data ingest
 
 Here we need two things - an ingest pipeline and an index. The ingest pipeline can be set via the OpenSearch dashboard dev tools console. The index creation we will do via the ETL pipeline so we can create a specific index for whatever dataset we are loading.
