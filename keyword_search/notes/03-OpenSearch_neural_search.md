@@ -292,7 +292,7 @@ PUT /my-nlp-index
       },
       "text_chunk_embedding": {
         "type": "nested",
-        "properties": {
+        "properties": {PUT /my-nlp-index
           "knn": {
             "type": "knn_vector",
             "dimension": 768
