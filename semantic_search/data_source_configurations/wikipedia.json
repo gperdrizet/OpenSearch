@@ -4,6 +4,6 @@
     "raw_data_file": "enwiki-20240930-cirrussearch-content.json.gz",
     "output_data_dir": "wikipedia",
     "extractor_function": "wikipedia_extractor",
-    "batch_size": 10,
-    "num_batches": 18
+    "batch_size": 50,
+    "num_batches": 180
 }
