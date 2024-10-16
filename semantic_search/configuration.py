@@ -18,14 +18,17 @@ TORCH_CACHE='/mnt/fast_scratch/'
 TOKENIZER_NAME='bert-base-uncased'
 MAX_TOKENS=512
 
-# OpenSearch neural search parameters
-MODEL_GROUP_ID='UcG3hZIBe4T97LPedcgx'
-MODEL_ID='S5-7hZIByzOSp7wU4wxw'
-INGEST_PIPELINE_ID='embedding-ingest-pipeline'
-BULK_INSERT_BATCH_SIZE=10
+# Embedding parameters
+EMBEDDING_MODEL='sentence-transformers/msmarco-distilbert-base-tas-b'
+WORKER_GPUS=['cuda:0'] * 4
+EMBEDDING_BATCH_SIZE=8
+WORKER_BATCHES_PER_ROUND=100
+BULK_INSERT_BATCH_SIZE=128
 
 # Default data source to process, can be overridden with command line argument
 DEFAULT_DATA_SOURCE='wikipedia'
+WIKIPEDIA_RECORD_COUNT=6889224
+WIKIPEDIA_ESTIMATED_CHUNK_COUNT=20648877
 
 # Option to force Luigi pipeline to start from a specific task.
 # Set 'None' to use default Luigi behavior where we start from the
@@ -33,10 +36,12 @@ DEFAULT_DATA_SOURCE='wikipedia'
 DEFAULT_FORCE_START='None'
 
 # Luigi task summary files
-EXTRACTION_SUMMARY='1.1-extraction_summary.log'
-TRANSFORM_SUMMARY='2.1-transform_summary.log'
-LOAD_SUMMARY='3.1-load_summary.log'
+EXTRACTION_SUMMARY='1.1-extraction_summary.json'
+PARSE_SUMMARY='2.1-parse_summary.json'
+EMBEDDING_SUMMARY='3.1-embedding_summary.json'
+LOAD_SUMMARY='4.1-load_summary.json'
 
 # Intermediate data files
 BATCHED_TEXT='1.2-extracted_text.h5'
-TRANSFORMED_TEXT='2.2-transformed_text.h5'
+PARSED_TEXT='2.2-parsed_text.h5'
+EMBEDDED_TEXT='3.2-embedded_data.h5'

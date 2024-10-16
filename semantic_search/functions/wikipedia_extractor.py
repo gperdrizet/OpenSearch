@@ -37,7 +37,8 @@ def wikipedia_extractor(source_config: dict) -> dict:
 
     # Counters and accumulators for batch loop
     line_count=0
-    batch_count=1
+    batch_count=0
+    record_count=0
     batch=[]
     batches=[]
 
@@ -52,6 +53,7 @@ def wikipedia_extractor(source_config: dict) -> dict:
         # Only pull text from article records (every other record is a metadata header)
         if line_count % 2 == 0:
             batch.append(line)
+            record_count+=1
 
         # Once the batch is full, add to this round's batches and reset
         if len(batch) == source_config['batch_size']:
@@ -91,6 +93,13 @@ def wikipedia_extractor(source_config: dict) -> dict:
     # Add some stuff the the summary
     extraction_summary['num_batches']=batch_count
     extraction_summary['run_time_seconds']=dT
+    extraction_summary['run_time_seconds']=dT
+    extraction_summary['worker_processes']=n_workers
+    extraction_summary['extracted_batches']=batch_count
+    extraction_summary['extraction_batch_size']=source_config['batch_size']
+    extraction_summary['extracted_records']=record_count
+    extraction_summary['observed_extraction_rate']=(record_count/dT)
+    extraction_summary['estimated_total_extraction_time']=(config.WIKIPEDIA_RECORD_COUNT / extraction_summary['observed_extraction_rate'])
 
     # Add some metadata to the hdf5 file
     metadata={'data_source': 'wikipedia','num_batches': batch_count}
