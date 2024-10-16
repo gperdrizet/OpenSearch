@@ -1,15 +1,7 @@
-version: '3'
 services:
   opensearch-node1:
     image: opensearchproject/opensearch:latest
     container_name: opensearch-node1
-    deploy:
-      resources:
-        reservations:
-          devices:
-          - driver: nvidia
-            device_ids: ['2']
-            capabilities: [gpu]
     environment:
       - cluster.name=opensearch-cluster # Name the cluster
       - node.name=opensearch-node1 # Name the node that will run in this container
@@ -37,13 +29,6 @@ services:
   opensearch-node2:
     image: opensearchproject/opensearch:latest
     container_name: opensearch-node2
-    deploy:
-      resources:
-        reservations:
-          devices:
-          - driver: nvidia
-            device_ids: ['2']
-            capabilities: [gpu]
     environment:
       - cluster.name=opensearch-cluster # Name the cluster
       - node.name=opensearch-node2 # Name the node that will run in this container
@@ -64,6 +49,7 @@ services:
       - opensearch-data2:/usr/share/opensearch/data # Creates volume called opensearch-data2 and mounts it to the container
     networks:
       - opensearch-net # All of the containers will join the same Docker bridge network
+
 
   opensearch-node3:
     image: opensearchproject/opensearch:latest

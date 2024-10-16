@@ -7,7 +7,6 @@ from opensearchpy import OpenSearch # pylint: disable = import-error
 import semantic_search.configuration as config
 
 def start_client() -> OpenSearch:
-
     '''Fires up the OpenSearch client'''
 
     # Set host and port
@@ -28,7 +27,6 @@ def start_client() -> OpenSearch:
     return client
 
 def initialize_index(index_name: str) -> None:
-
     '''Set-up OpenSearch index. Deletes index if it already exists
     at run start. Creates new index for run.'''
 
@@ -43,24 +41,26 @@ def initialize_index(index_name: str) -> None:
 
         index_body={
             "settings": {
+                "index": {
                 "number_of_shards": 3,
-                "index.knn": "true",
-                "default_pipeline": f'{config.INGEST_PIPELINE_ID}'
+                "knn": "true",
+                "knn.algo_param.ef_search": 100
+                }
             },
             "mappings": {
                 "properties": {
                     "text_embedding": {
                         "type": "knn_vector",
                         "dimension": 768,
-                        "method": {
-                        "engine": "lucene",
                         "space_type": "l2",
-                        "name": "hnsw",
-                        "parameters": {}
+                        "method": {
+                            "name": "hnsw",
+                            "engine": "lucene",
+                            "parameters": {
+                                "ef_construction": 128,
+                                "m": 24
+                            }
                         }
-                    },
-                    "text": {
-                        "type": "text"
                     }
                 }
             }

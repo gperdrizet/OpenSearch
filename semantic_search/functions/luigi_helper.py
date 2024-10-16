@@ -6,14 +6,15 @@ import pathlib
 # Internal imports
 import semantic_search.configuration as config
 
-def force_from(data_source: str, task_name: str = None):
+def force_from(data_dir: str, task_name: str = None):
     '''Forces all to be re-run starting with given task by removing their output'''
 
     # Dictionary of string task names and their output files
     tasks = {
-        'ExtractRawData': f'{config.DATA_PATH}/{data_source}/{config.EXTRACTION_SUMMARY}',
-        'TransformData': f'{config.DATA_PATH}/{data_source}/{config.TRANSFORM_SUMMARY}',
-        'LoadData': f'{config.DATA_PATH}/{data_source}/{config.LOAD_SUMMARY}'
+        'ExtractRawData': f'{config.DATA_PATH}/{data_dir}/{config.EXTRACTION_SUMMARY}',
+        'ParseData': f'{config.DATA_PATH}/{data_dir}/{config.PARSE_SUMMARY}',
+        'EmbedData': f'{config.DATA_PATH}/{data_dir}/{config.EMBEDDING_SUMMARY}',
+        'LoadData': f'{config.DATA_PATH}/{data_dir}/{config.LOAD_SUMMARY}'
     }
 
     # Flag to determine if we remove each file or not

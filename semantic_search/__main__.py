@@ -29,14 +29,16 @@ if __name__ == '__main__':
     Path(output_data_path).mkdir(parents=True, exist_ok=True)
 
     # Require restart of pipeline from intermediate job, if asked
-    helper.force_from(args.data_source, args.force_from)
+    helper.force_from(source_config['target_index_name'], args.force_from)
 
     luigi.build(
         [
             # Extract and batch text from raw data
             tasks.ExtractRawData(data_source=args.data_source),
-            # Clean and semantically chunk text
-            tasks.TransformData(data_source=args.data_source),
+            # Clean and semantically split extracted text
+            tasks.ParseData(data_source=args.data_source),
+            # Calculates embedding vectors for cleaned and chunked text
+            tasks.EmbedData(data_source=args.data_source),
             # Load data into OpenSearch KNN vector database
             tasks.LoadData(data_source=args.data_source)
         ],
