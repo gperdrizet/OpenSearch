@@ -25,7 +25,7 @@ if __name__ == '__main__':
         source_config=json.load(source_config_file)
 
     # Make output directory for intermediate files
-    output_data_path=f"{config.DATA_PATH}/{source_config['output_data_dir']}"
+    output_data_path=f"{config.DATA_PATH}/{source_config['target_index_name']}"
     Path(output_data_path).mkdir(parents=True, exist_ok=True)
 
     # Require restart of pipeline from intermediate job, if asked

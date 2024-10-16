@@ -34,7 +34,7 @@ class ExtractRawData(luigi.Task):
         source_config=self.load_data_source_config()
 
         extraction_summary_file=(f"{config.DATA_PATH}/"+
-            f"{source_config['output_data_dir']}/{config.EXTRACTION_SUMMARY}")
+            f"{source_config['target_index_name']}/{config.EXTRACTION_SUMMARY}")
 
         # Define the extraction summary file as the target for this task
         return luigi.LocalTarget(extraction_summary_file)
@@ -75,7 +75,7 @@ class TransformData(luigi.Task):
         source_config=self.load_data_source_config()
 
         transform_summary_file=(f"{config.DATA_PATH}/"+
-            f"{source_config['output_data_dir']}/{config.TRANSFORM_SUMMARY}")
+            f"{source_config['target_index_name']}/{config.TRANSFORM_SUMMARY}")
 
         # Define the parse summary file as the target for this task
         return luigi.LocalTarget(transform_summary_file)
@@ -116,7 +116,7 @@ class LoadData(luigi.Task):
         source_config=self.load_data_source_config()
 
         load_summary_file=(f"{config.DATA_PATH}/"+
-            f"{source_config['output_data_dir']}/{config.LOAD_SUMMARY}")
+            f"{source_config['target_index_name']}/{config.LOAD_SUMMARY}")
 
         # Define the load summary file as the target for this task
         return luigi.LocalTarget(load_summary_file)

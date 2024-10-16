@@ -22,7 +22,7 @@ def wikipedia_extractor(source_config: dict) -> dict:
     extraction_summary=source_config
 
     # Prepare the hdf5 output
-    output_file=f"{config.DATA_PATH}/{source_config['output_data_dir']}/{config.BATCHED_TEXT}"
+    output_file=f"{config.DATA_PATH}/{source_config['target_index_name']}/{config.BATCHED_TEXT}"
     pathlib.Path(output_file).unlink(missing_ok=True)
     output=h5py.File(output_file, 'w')
     batch_group=output.require_group('batches')

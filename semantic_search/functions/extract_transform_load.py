@@ -47,13 +47,13 @@ def transform_data(data_source: str) -> dict:
     transform_summary=source_config
 
     # Prepare the hdf5 output
-    output_file=f"{config.DATA_PATH}/{source_config['output_data_dir']}/{config.TRANSFORMED_TEXT}"
+    output_file=f"{config.DATA_PATH}/{source_config['target_index_name']}/{config.TRANSFORMED_TEXT}"
     pathlib.Path(output_file).unlink(missing_ok=True)
     output=h5py.File(output_file, 'w')
     output_batch_group=output.require_group('batches')
 
     # Open the input
-    input_file_path=f"{config.DATA_PATH}/{source_config['output_data_dir']}/{config.BATCHED_TEXT}"
+    input_file_path=f"{config.DATA_PATH}/{source_config['target_index_name']}/{config.BATCHED_TEXT}"
     input_data=h5py.File(input_file_path, 'r')
 
     # Set number of workers to one less than the CPU count and create the pool
@@ -129,7 +129,7 @@ def load_data(data_source: str) -> dict:
     load_summary=source_config
 
     # Open the input
-    input_file_path=(f"{config.DATA_PATH}/{source_config['output_data_dir']}" +
+    input_file_path=(f"{config.DATA_PATH}/{source_config['target_index_name']}" +
         f'/{config.TRANSFORMED_TEXT}')
 
     input_data=h5py.File(input_file_path, 'r')
@@ -168,7 +168,7 @@ def load_data(data_source: str) -> dict:
             # content to send to open search
             request_header={
                 'update': {
-                    '_index': data_source, # Data source string is also the index name
+                    '_index': source_config['target_index_name'],
                     '_id': record_num
                 }
             }
