@@ -57,13 +57,12 @@ def parse_data(data_source: str) -> dict:
     input_file_path=f"{config.DATA_PATH}/{source_config['target_index_name']}/{config.EXTRACTED_TEXT}"
     input_data=h5py.File(input_file_path, 'r')
 
-    # Set number of workers to one less than the CPU count and create the pool
+    # Set number of workers to one less than the CPU count
     n_workers=mp.cpu_count() - 1
-    pool=mp.Pool(processes=n_workers)
 
     # Counters and accumulators for batch loop
-    batch_count=1
-    record_count=1
+    batch_count=0
+    record_count=0
     batches=[]
 
     # Start the timer
@@ -84,28 +83,63 @@ def parse_data(data_source: str) -> dict:
 
         # Add the decoded batch to this round
         batches.append(decoded_batch)
+        print(f'Adding batch of length {len(decoded_batch)} to round.')
 
-        # Once we have a batch for each worker, run this round
+        # There are three ways we to enter job submission:
+        #
+        # 1. We have a batch for every worker.
+        # 2. The number of batches left to submit in order to complete the number of
+        #    batches requested by the user is less than the number of workers.
+        # 3. We have reached the end of the input.
+        #
+        # Each of these three cases also has a different thing to do after. For number
+        # we submit the jobs and keep going. For number two, we break the line loop and stop.
+        # for number three, we have already left the line loop and can just end after
+        # the last batches.
+
+        # 1. If we have a batch for each worker, submit
         if len(batches) == n_workers:
 
-            # Holder for results from workers
-            worker_results=[]
-
-            # Submit each batch to a worker
-            for batch in batches:
-                worker_result=pool.apply_async(parse_funcs.clean_and_chunk, (batch,))
-                worker_results.append(worker_result)
-
-            # Collect the results from the workers
-            results=[worker_result.get() for worker_result in worker_results]
-
-            # Save each result as a batch in the hdf5 file
-            for result in results:
-                output_batch_group.create_dataset(str(batch_count), data=result)
-                batch_count+=1
+            batch_count=parse_funcs.submit_batches(n_workers, batches, output_batch_group, batch_count)
 
             # Reset batches for next round
             batches=[]
+
+        # 2. If the number of batches left to fulfill a user request for a specific number of
+        # batches is less than the number of workers, submit that number of batches
+        # once we have them.
+        if source_config['num_batches'] != 'all':
+
+            batches_remaining=source_config['num_batches'] - batch_count
+            print(f'Batches remaining: {batches_remaining}')
+
+            if batches_remaining < n_workers and len(batches) == batches_remaining:
+                print(f'Submitting last {batches_remaining} batches')
+                print(f'Record count is: {record_count}')
+
+                n_workers=batches_remaining
+                batch_count=parse_funcs.submit_batches(n_workers, batches, output_batch_group, batch_count)
+
+                # Break the line loop to end the run
+                break
+            
+            # Also break the line loop if we have completed the exact number of batches
+            # requested by the user
+            if batch_count == source_config['num_batches']:
+                break
+
+    # 3. If we are extracting all of the data, i.e. the user has not requested a specific
+    # number of batches to run, submit whatever is left over after the last extraction
+    # round after we have finished reading the input file
+    if source_config['num_batches'] == 'all':
+
+        # If we have batches that did not get processed because we ran out of input
+        # before collecting enough batches for a full extraction round, start a
+        # round with what we have
+        if len(batches) != 0:
+
+            n_workers=len(batches)
+            batch_count=parse_funcs.submit_batches(n_workers, batches, output_batch_group, batch_count)
 
     dT=time.time() - start_time # pylint: disable = invalid-name
 

@@ -54,6 +54,7 @@ def wikipedia_extractor(source_config: dict) -> dict:
         # Once the batch is full, add it to this round's batches and clear it
         # to accumulate another batch
         if len(batch) == source_config['batch_size']:
+            print(f'Adding batch of length {len(batch)} to extraction round.')
             batches.append(batch)
             batch=[]
 
@@ -115,7 +116,6 @@ def wikipedia_extractor(source_config: dict) -> dict:
             n_workers=len(batches)
             batch_count=submit_batches(n_workers, batches, batch_group, batch_count)
 
-
     # Stop the timer after the last round finishes
     dT=time.time() - start_time # pylint: disable = invalid-name
 
@@ -168,6 +168,7 @@ def submit_batches(
 
     # Save each result as a batch in the hdf5 file
     for result in results:
+        print(f'Saving extracted batch of length {len(result)}')
         batch_group.create_dataset(str(batch_count), data=result)
         batch_count+=1
 
