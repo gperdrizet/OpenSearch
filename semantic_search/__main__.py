@@ -34,7 +34,7 @@ if __name__ == '__main__':
     luigi.build(
         [
             # Extract and batch text from raw data
-            tasks.ExtractRawData(data_source=args.data_source),
+            tasks.ExtractData(data_source=args.data_source),
             # Clean and semantically split extracted text
             tasks.ParseData(data_source=args.data_source),
             # Calculates embedding vectors for cleaned and chunked text

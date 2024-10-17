@@ -22,7 +22,7 @@ def wikipedia_extractor(source_config: dict) -> dict:
     extraction_summary=source_config
 
     # Prepare the hdf5 output
-    output_file=f"{config.DATA_PATH}/{source_config['target_index_name']}/{config.BATCHED_TEXT}"
+    output_file=f"{config.DATA_PATH}/{source_config['target_index_name']}/{config.EXTRACTED_TEXT}"
     pathlib.Path(output_file).unlink(missing_ok=True)
     output=h5py.File(output_file, 'w')
     batch_group=output.require_group('batches')
@@ -111,7 +111,7 @@ def wikipedia_extractor(source_config: dict) -> dict:
         # before collecting enough batches for a full extraction round, start a
         # round with what we have
         if len(batches) != 0:
-            
+
             n_workers=len(batches)
             batch_count=submit_batches(n_workers, batches, batch_group, batch_count)
 

@@ -10,7 +10,7 @@ import luigi
 import semantic_search.configuration as config
 import semantic_search.functions.extract_transform_load as etl_funcs
 
-class ExtractRawData(luigi.Task):
+class ExtractData(luigi.Task):
     '''Runs source specific data extraction function. Reads raw data,
     extracts text and saves in batches.'''
 
@@ -56,7 +56,7 @@ class ParseData(luigi.Task):
     data_source=luigi.Parameter()
 
     def requires(self):
-        return ExtractRawData(self.data_source)
+        return ExtractData(self.data_source)
 
     def load_data_source_config(self):
         '''Loads data source specific configuration dictionary.'''

@@ -54,7 +54,7 @@ def parse_data(data_source: str) -> dict:
     output_batch_group=output.require_group('batches')
 
     # Open the input
-    input_file_path=f"{config.DATA_PATH}/{source_config['target_index_name']}/{config.BATCHED_TEXT}"
+    input_file_path=f"{config.DATA_PATH}/{source_config['target_index_name']}/{config.EXTRACTED_TEXT}"
     input_data=h5py.File(input_file_path, 'r')
 
     # Set number of workers to one less than the CPU count and create the pool

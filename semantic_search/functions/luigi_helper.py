@@ -11,7 +11,7 @@ def force_from(data_dir: str, task_name: str = None):
 
     # Dictionary of string task names and their output files
     tasks = {
-        'ExtractRawData': [
+        'ExtractData': [
             f'{config.DATA_PATH}/{data_dir}/{config.EXTRACTION_SUMMARY}',
             f'{config.DATA_PATH}/{data_dir}/{config.EXTRACTED_TEXT}'
         ],
@@ -20,8 +20,8 @@ def force_from(data_dir: str, task_name: str = None):
             f'{config.DATA_PATH}/{data_dir}/{config.PARSED_TEXT}'
         ],
         'EmbedData': [
-            f'{config.DATA_PATH}/{data_dir}/{config.EMBEDDING_SUMMARY}'
-            f'{config.DATA_PATH}/{data_dir}/{config.EMBEDDED_TEXT}',
+            f'{config.DATA_PATH}/{data_dir}/{config.EMBEDDING_SUMMARY}',
+            f'{config.DATA_PATH}/{data_dir}/{config.EMBEDDED_TEXT}'
         ],
         'LoadData': [f'{config.DATA_PATH}/{data_dir}/{config.LOAD_SUMMARY}']
     }
