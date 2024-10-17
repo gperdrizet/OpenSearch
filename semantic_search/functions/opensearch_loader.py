@@ -1,5 +1,8 @@
 '''Collection of functions for loading data into OpenSearch.'''
 
+# Standard imports
+import time
+
 # PyPI imports
 from opensearchpy import OpenSearch # pylint: disable = import-error
 
@@ -70,3 +73,37 @@ def initialize_index(index_name: str) -> None:
 
     # Close client
     client.close()
+
+
+def index_batch(client, bulk_insert_batch: list, source_config: dict, record_count: int):
+    '''Formats bulk insert batch for indexing and submits it to OpenSearch'''
+
+    # Build the requests
+    knn_requests=[]
+
+    for embedded_text in bulk_insert_batch:
+
+        record_count+=1
+
+        knn_request_header={
+            'index': {
+                '_index': source_config['target_index_name'],
+                '_id': record_count
+            }
+        }
+
+        knn_requests.append(knn_request_header)
+
+        request_body={'text_embedding': embedded_text}
+
+        knn_requests.append(request_body)
+
+        # Do the insert
+        _=client.bulk(knn_requests)
+
+    # Clear the batch
+    bulk_insert_batch=[]
+
+    # Return the updated record count
+    return record_count
+

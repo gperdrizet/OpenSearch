@@ -1,11 +1,49 @@
 '''Functions to embed text for indexing into KNN index.'''
 
+# Standard imports
+import multiprocessing as mp
+
 # PyPI imports
-from transformers import AutoTokenizer, AutoModel
+import h5py
 import torch
+from transformers import AutoTokenizer, AutoModel
 
 # Internal imports
 import semantic_search.configuration as config
+
+def submit_batches(
+    n_workers: int,
+    batches: list,
+    output_batch_group: h5py._hl.group.Group,
+    batch_count: int
+) -> int:
+
+    '''Takes batches list and current batch count, submits batches to worker pool for embedding.
+    Returns updated batch count after receiving and saving worker results.'''
+
+    # Holder for results from workers
+    worker_results=[]
+
+    # Start the pool
+    pool=mp.Pool(processes=n_workers)
+
+    # Holder for results from workers
+    worker_results=[]
+
+    # Submit each batch to a worker
+    for batch, gpu in zip(batches, config.WORKER_GPUS):
+        worker_result=pool.apply_async(calculate_embeddings, (batch,gpu,))
+        worker_results.append(worker_result)
+
+    # Collect the results from the workers
+    results=[worker_result.get() for worker_result in worker_results]
+
+    # Save each result as a batch in the hdf5 file
+    for result in results:
+        output_batch_group.create_dataset(str(batch_count), data=result)
+        batch_count+=1
+
+    return batch_count
 
 def calculate_embeddings(batch: list, gpu: str) -> list:
     '''Takes batch of text and gpu identifier, calculates and

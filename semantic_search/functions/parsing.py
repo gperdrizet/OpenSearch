@@ -16,7 +16,8 @@ def submit_batches(
     n_workers: int,
     batches: list,
     output_batch_group: h5py._hl.group.Group,
-    batch_count: int
+    batch_count: int,
+    chunk_count: int,
 ) -> int:
 
     '''Takes batches list and current batch count, submits batches to worker pool for parsing.
@@ -43,8 +44,9 @@ def submit_batches(
     for result in results:
         output_batch_group.create_dataset(str(batch_count), data=result)
         batch_count+=1
+        chunk_count+=len(result)
 
-    return batch_count
+    return batch_count, chunk_count
 
 
 def clean_and_chunk(texts: list) -> list:
