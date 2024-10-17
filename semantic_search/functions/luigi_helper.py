@@ -11,17 +11,26 @@ def force_from(data_dir: str, task_name: str = None):
 
     # Dictionary of string task names and their output files
     tasks = {
-        'ExtractRawData': f'{config.DATA_PATH}/{data_dir}/{config.EXTRACTION_SUMMARY}',
-        'ParseData': f'{config.DATA_PATH}/{data_dir}/{config.PARSE_SUMMARY}',
-        'EmbedData': f'{config.DATA_PATH}/{data_dir}/{config.EMBEDDING_SUMMARY}',
-        'LoadData': f'{config.DATA_PATH}/{data_dir}/{config.LOAD_SUMMARY}'
+        'ExtractRawData': [
+            f'{config.DATA_PATH}/{data_dir}/{config.EXTRACTION_SUMMARY}',
+            f'{config.DATA_PATH}/{data_dir}/{config.EXTRACTED_TEXT}'
+        ],
+        'ParseData': [
+            f'{config.DATA_PATH}/{data_dir}/{config.PARSE_SUMMARY}',
+            f'{config.DATA_PATH}/{data_dir}/{config.PARSED_TEXT}'
+        ],
+        'EmbedData': [
+            f'{config.DATA_PATH}/{data_dir}/{config.EMBEDDING_SUMMARY}'
+            f'{config.DATA_PATH}/{data_dir}/{config.EMBEDDED_TEXT}',
+        ],
+        'LoadData': [f'{config.DATA_PATH}/{data_dir}/{config.LOAD_SUMMARY}']
     }
 
     # Flag to determine if we remove each file or not
     remove_output=False
 
     # Loop on the task dictionary
-    for task, output_file in tasks.items():
+    for task, output_files in tasks.items():
 
         # When we find the task, flip the value of remove_output to True
         # so that we will remove the output files for this and all
@@ -31,4 +40,5 @@ def force_from(data_dir: str, task_name: str = None):
 
         # If the flag has been flipped remove the output file
         if remove_output is True:
-            pathlib.Path(output_file).unlink(missing_ok = True)
+            for output_file in output_files:
+                pathlib.Path(output_file).unlink(missing_ok = True)

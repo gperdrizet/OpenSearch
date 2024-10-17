@@ -42,6 +42,6 @@ EMBEDDING_SUMMARY='3.1-embedding_summary.json'
 LOAD_SUMMARY='4.1-load_summary.json'
 
 # Intermediate data files
-BATCHED_TEXT='1.2-extracted_text.h5'
+EXTRACTED_TEXT='1.2-extracted_text.h5'
 PARSED_TEXT='2.2-parsed_text.h5'
 EMBEDDED_TEXT='3.2-embedded_data.h5'
