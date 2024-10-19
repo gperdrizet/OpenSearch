@@ -5,6 +5,7 @@ import time
 import json
 import pathlib
 import multiprocessing as mp
+from multiprocessing import Manager, Process
 from gzip import GzipFile
 
 # PyPI imports
@@ -18,204 +19,280 @@ import semantic_search.configuration as config
 def wikipedia_extractor(source_config: dict) -> dict:
     '''Runs text extraction and batching on CirrusSearch Wikipedia dump.'''
 
-    # Start the extraction summary with the data from the source configuration
-    extraction_summary=source_config
+    # Start multiprocessing manager
+    manager=Manager()
 
-    # Prepare the hdf5 output
-    output_file=f"{config.DATA_PATH}/{source_config['target_index_name']}/{config.EXTRACTED_TEXT}"
-    pathlib.Path(output_file).unlink(missing_ok=True)
-    output=h5py.File(output_file, 'w')
-    batch_group=output.require_group('batches')
+    # Set-up the extraction summary as a shared variable via the multiprocessing
+    # manager so that both the reader and writer processes can add some summary
+    # statistics to it when they finish
+    extraction_summary=manager.dict(source_config)
 
-    # Open the input file stream
-    gzip_data_file_path=f"{config.RAW_DATA_PATH}/{source_config['raw_data_file']}"
-    file=GzipFile(gzip_data_file_path)
+    # Set-up reader and writer queues to move workunit from the reader
+    # process to the workers and from the workers to the writer process
+    reader_queue=manager.Queue(maxsize=100)
+    writer_queue=manager.Queue(maxsize=100)
 
-    # Set number of workers to one less than the CPU count
-    n_workers=mp.cpu_count() - 1
+    # Set-up reader and writer processes: reader gets batches of records
+    # from the input file and writer takes batches for extracted text
+    # from the workers and writes to file
 
-    # Counters and accumulators for batching loop
-    batch_count=0
-    record_count=0
-    batch=[]
-    batches=[]
+    # Set extraction worker count based on avalible CPUs. Subtract three: one
+    # for the reader and writer processes and one for the system
+    n_workers=mp.cpu_count() - 3
 
-    # Start the timer
-    start_time = time.time()
+    # IO paths
+    input_file_path=f"{config.RAW_DATA_PATH}/{source_config['raw_data_file']}"
+    output_file_path=f"{config.DATA_PATH}/{source_config['target_index_name']}/{config.EXTRACTED_TEXT}"
 
-    # Loop on the lines from the input file stream and accumulate batches
-    for line_count, line in enumerate(file):
+    reader_process=Process(
+        target=reader,
+        args=(
+            input_file_path, 
+            source_config['extractor_workunit_size'],
+            reader_queue, 
+            n_workers,
+            source_config['extracted_records_target'],
+            extraction_summary
+        )
+    )
 
-        # Add article records (every other line is a metadata header) to the batch
-        if line_count % 2 != 0:
-            batch.append(line)
-            record_count+=1
+    writer_process=Process(
+        target=writer,
+        args=(
+            output_file_path,
+            source_config['extractor_output_batch_size'],
+            writer_queue,
+            n_workers,
+            extraction_summary
+        )
+    )
 
-        # Once the batch is full, add it to this round's batches and clear it
-        # to accumulate another batch
-        if len(batch) == source_config['batch_size']:
-            batches.append(batch)
-            batch=[]
+    # Start the extractor pool
+    extractor_pool=mp.Pool(processes=n_workers)
 
-        # There are three ways we to enter job submission:
-        #
-        # 1. We have a batch for every worker.
-        # 2. The number of batches left to submit in order to complete the number of
-        #    batches requested by the user is less than the number of workers.
-        # 3. We have reached the end of the input.
-        #
-        # Each of these three cases also has a different thing to do after. For number
-        # we submit the jobs and keep going. For number two, we break the line loop and stop.
-        # for number three, we have already left the line loop and can just end after
-        # the last batches.
+    # Start each extraction worker
+    for _ in range(n_workers):
+        extractor_pool.apply_async(extract_text, (reader_queue,writer_queue,))
 
-        # 1. If we have a batch for each worker, submit
-        if len(batches) == n_workers:
+    # Start the reader and writer processes to begin real work, timing how long it takes.
+    start_time=time.time()
 
-            batch_count=submit_batches(n_workers, batches, batch_group, batch_count)
+    reader_process.start()
+    writer_process.start()
 
-            # Empty the batches for the next round
-            batches=[]
+    # Wait for the extractor pool workers to finish, then shut the pool down.
+    extractor_pool.close()
+    extractor_pool.join()
 
-        # 2. If the number of batches left to fulfill a user request for a specific number of
-        # batches is less than the number of workers, submit that number of batches
-        # once we have them
-        if source_config['num_batches'] != 'all':
+    # Stop the timer
+    dT=time.time() - start_time
 
-            batches_remaining=source_config['num_batches'] - batch_count
+    # Clean up IO processes
+    reader_process.join()
+    reader_process.close()
 
-            if batches_remaining < n_workers and len(batches) == batches_remaining:
+    writer_process.join()
+    writer_process.close()
 
-                n_workers=batches_remaining
-                batch_count=submit_batches(n_workers, batches, batch_group, batch_count)
-
-                # Break the line loop to end the run
-                break
-            
-            # Also break the line loop if we have completed the exact number of batches
-            # requested by the user
-            if batch_count == source_config['num_batches']:
-                break
-
-    # 3. If we are extracting all of the data, i.e. the user has not requested a specific
-    # number of batches to run, submit whatever is left over after the last extraction
-    # round after we have finished reading the input file
-    if source_config['num_batches'] == 'all':
-
-        # If there are records in the last batch, add it to the batch list for the last
-        # extraction round
-        if len(batch) != 0:
-            batches.append(batch)
-
-        # If we have batches that did not get processed because we ran out of input
-        # before collecting enough batches for a full extraction round, start a
-        # round with what we have
-        if len(batches) != 0:
-
-            n_workers=len(batches)
-            batch_count=submit_batches(n_workers, batches, batch_group, batch_count)
-
-    # Stop the timer after the last round finishes
-    dT=time.time() - start_time # pylint: disable = invalid-name
-
-    # Add some stuff the the summary
-    extraction_summary['num_batches']=batch_count
-    extraction_summary['run_time_seconds']=dT
-    extraction_summary['run_time_seconds']=dT
-    extraction_summary['worker_processes']=n_workers
-    extraction_summary['extracted_batches']=batch_count
-    extraction_summary['extraction_batch_size']=source_config['batch_size']
-    extraction_summary['extracted_records']=record_count
-    extraction_summary['observed_extraction_rate']=record_count/dT
-
+    # Write some stuff to the extraction summary then recover it to a normal python dictionary
+    # from the multiprocessing shared memory DictProxy object
+    extraction_summary['observed_extraction_rate']=extraction_summary['input_records_extracted']/dT
     extraction_time=config.WIKIPEDIA_RECORD_COUNT / extraction_summary['observed_extraction_rate']
     extraction_summary['estimated_total_extraction_time']=extraction_time
+    extraction_summary=dict(extraction_summary)
 
-    # Add some metadata to the hdf5 file
-    metadata={'data_source': 'wikipedia','num_batches': batch_count}
-    output.attrs.update(metadata)
+    # Close the queues and stop the manager
+    manager.shutdown()
 
-    # Close the hdf5 file
-    output.close()
-
+    # Finished
     return extraction_summary
 
+def reader(
+        input_file_path: str,
+        extractor_workunit_size: int,
+        reader_queue: mp.Queue,
+        n_workers: int,
+        extracted_records_target: int,
+        extraction_summary: dict
+) -> None:
+    
+    '''Reads lines from input file, collects workunits and sends them to the
+    extraction workers via the reader queue. Also collects some run statistics
+    via the shared memory dictionary "extraction_summary".'''
 
-def submit_batches(
-    n_workers: int,
-    batches: list,
-    batch_group: h5py._hl.group.Group,
-    batch_count: int
-) -> int:
+    # Open the input file stream
+    file=GzipFile(input_file_path)
 
-    '''Takes batches list and current batch count, submits batches to worker pool for text
-    extraction. Returns updated batch count after receiving and saving worker results.'''
+    # Counter and accumulator for workunits
+    workunit_count=0
+    workunit=[]
 
-    # Holder for results from workers
-    worker_results=[]
+    # Open the input file stream
+    with open(input_file_path, 'r') as file:
 
-    # Start the pool
-    pool=mp.Pool(processes=n_workers)
+        # Loop until we reach EOF or the specified number of target texts, if any.
+        for line_num, line in enumerate(file):
 
-    # Submit each batch to a worker
-    for batch in batches:
-        worker_result=pool.apply_async(extract_wikipedia_text, (batch,))
-        worker_results.append(worker_result)
+            # Add every other line to the workunit. Every other because the input file
+            # has header metadata and then article content on alternating lines.
+            if line_num % 2 != 0:
+                workunit.append(line)
 
-    # Collect the results from the workers
-    results=[worker_result.get() for worker_result in worker_results]
+            # Once the workunit is full, send it to the extraction workers via the
+            # reader queue, then clear it to start accumulating the next one.
+            if len(workunit) == extractor_workunit_size:
+                reader_queue.put(workunit)
+                workunit_count+=1
+                workunit=[]
 
-    # Save each result as a batch in the hdf5 file
-    for result in results:
-        batch_group.create_dataset(str(batch_count), data=result)
-        batch_count+=1
+            # If we are not processing all of the input records break when we have
+            # seen the requested amount. Need to divide the line count by two here
+            # because only every other line in the input file is record content
+            if extracted_records_target != 'all':
+                if line_num // 2 == extracted_records_target:
+                    break
 
-    return batch_count
+    # Once we have exited the line loop, either because we reached target records
+    # or EOF send each worker the 'done' string.
+    for _ in range(n_workers):
+        reader_queue.put('done')
+
+    # Add some information to the extraction summary and exit
+    extraction_summary['input_lines_read']=line_num
+    extraction_summary['input_records_extracted']=line_num // 2
+    extraction_summary['extraction_workunits_processed']=workunit_count
+
+    return
 
 
-def extract_wikipedia_text(lines: list) -> list:
-    '''Worker function to do text extraction and source specific cleaning on Wikipedia CirrusSearch
-    dump source. Takes a batch of lines from file stream, returns list of text chunks.'''
+def writer(
+        output_file_path,
+        extractor_output_batch_size,
+        writer_queue,
+        n_workers,
+        extraction_summary
+) -> None:
+    
+    '''Collects workunits of extracted texts from extraction workers into batches.
+    Writes them to disk in hdf5. Also collects some run statistics
+    via the shared memory dictionary "extraction_summary".'''
 
-    # Holder for result
-    cleaned_texts=[]
+    # Prepare the hdf5 output
+    pathlib.Path(output_file_path).unlink(missing_ok=True)
+    output=h5py.File(output_file_path, 'w')
+    batch_group=output.require_group('batches')
 
-    # Loop on input lines
-    for line in lines:
+    # Counter and collector for output batches and records
+    output_batch_count=0
+    output_record_count=0
+    output_batch=[]
 
-        # Load record dictionary from JSON line
-        record=json.loads(line)
+    # Collector for "done" signals from extraction workers. Will need to break the main loop
+    # once we have seen done from each worker.
+    done_count=0
 
-        # Get the text from the record, catching key error
-        # in case this record doesn't have text for some reason
-        try:
+    # Main loop
+    while True:
 
-            # Only parse namespace 0 articles which are not disambiguation
-            if record['namespace'] == 0 and 'Disambiguation pages' not in record['category']:
+        # Get the next workunit from the writer queue.
+        workunit=writer_queue.get()
 
-                # Convert source string to wikicode
-                wikicode=mwparserfromhell.parse(record['source_text'])
+        # Check to see if we are done.
+        if workunit == 'done':
+            done_count+=1
 
-                # Strip garbage out of wikicode source
-                source_string=wikicode.strip_code(
-                    normalize=True,
-                    collapse=True,
-                    keep_template_params=False
-                )
+            # Break the main loop once we have received done from each extraction worker.
+            if done_count == n_workers:
+                break
 
-                # Remove extra sections from the end of the document
-                source_string=remove_extra_sections(source_string)
+        # Add the extracted texts from the workunit to the output batch.
+        output_batch.extend(workunit)
+        print(f'Writer process received workunit, current output batch size: {len(output_batch)}')
 
-                # Get rid of image thumbnail lines and leading spaces
-                source_string=remove_thumbnails(source_string)
+        # If the output batch is full, write it to disk and reset for the next.
+        if len(output_batch) >= extractor_output_batch_size:
+            batch_group.create_dataset(str(output_batch_count), data=output_batch)
+            output_record_count+=len(output_batch)
+            output_batch_count+=1
+            output_batch=[]
 
-                # Add to results
-                cleaned_texts.append(source_string)
+    # Once we break out of the main loop, write one last time to flush anything
+    # remaining in the output batch to disk and close the output connection.
+    batch_group.create_dataset(str(output_batch_count), data=output_batch)
+    output_record_count+=len(output_batch)
+    output_batch_count+=1
+    output.close()
 
-        except KeyError:
-            pass
+    # Add the batch count to the extraction summary for posterity
+    extraction_summary['extracted_batches_written']=output_batch_count
+    extraction_summary['extracted_texts_written']=output_record_count
 
-    return cleaned_texts
+    # Finished
+    return
+
+
+def extract_text(reader_queue: mp.Queue, writer_queue: mp.Queue) -> None:
+    '''Worker function to do text extraction and source specific cleaning on 
+    Wikipedia CirrusSearch dump source. Takes workunits from reader queue
+    and sends extracted text to writer function for output to disk.'''
+
+    # Loop until we receive 'done' from the reader.
+    while True:
+
+        # Get a workunit from the reader queue.
+        workunit=reader_queue.get()
+
+        # Break out of the main loop if the reader process tells us we are done.
+        if workunit == 'done':
+            break
+
+        # Holder extracted text
+        extracted_texts=[]
+
+        # Loop on the input records in the workunit
+        for record_json in workunit:
+
+            # Load the record for parsing
+            record=json.loads(record_json)
+
+            # Get the text from the record, catching key error
+            # in case this record doesn't have text for some reason
+            try:
+
+                # Only parse namespace 0 articles which are not disambiguation
+                if record['namespace'] == 0 and 'Disambiguation pages' not in record['category']:
+
+                    # Convert source string to wikicode
+                    wikicode=mwparserfromhell.parse(record['source_text'])
+
+                    # Strip garbage out of wikicode source
+                    source_string=wikicode.strip_code(
+                        normalize=True,
+                        collapse=True,
+                        keep_template_params=False
+                    )
+
+                    # Remove extra sections from the end of the document
+                    source_string=remove_extra_sections(source_string)
+
+                    # Get rid of image thumbnail lines and leading spaces
+                    source_string=remove_thumbnails(source_string)
+
+                    # Add to results
+                    extracted_texts.append(source_string)
+
+            # If we do find a key error, just skip this record
+            except KeyError:
+                pass
+        
+        # Pass the extracted texts from this workunit to the writer process
+        writer_queue.put(extracted_texts)
+
+    # Once we leave the main loop, send the "done" signal to the writer process
+    writer_queue.put('done')
+
+    # Finish
+    return
 
 
 def remove_thumbnails(source_string: str) -> str:

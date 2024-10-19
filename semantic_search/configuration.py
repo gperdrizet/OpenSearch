@@ -27,7 +27,7 @@ WORKER_BATCHES_PER_ROUND=100
 BULK_INSERT_BATCH_SIZE=128
 
 # Default data source to process, can be overridden with command line argument
-DEFAULT_DATA_SOURCE='wikipedia'
+DEFAULT_DATA_SOURCE='wikipedia-sample'
 WIKIPEDIA_RECORD_COUNT=6889224
 WIKIPEDIA_ESTIMATED_CHUNK_COUNT=20648877
 
