@@ -5,17 +5,19 @@ import time
 import json
 import pathlib
 import multiprocessing as mp
+import multiprocessing as mp
+from multiprocessing import Manager, Process
 
 # PyPI imports
 import h5py
-from opensearchpy import exceptions # pylint: disable = import-error
+from opensearchpy import exceptions
 
 # Internal imports
 import semantic_search.configuration as config
 import semantic_search.functions.embedding as embed_funcs
 import semantic_search.functions.parsing as parse_funcs
 import semantic_search.functions.opensearch_loader as loader_funcs
-from semantic_search.functions.wikipedia_extractor import wikipedia_extractor # pylint: disable = unused-import
+from semantic_search.functions.wikipedia_extractor import wikipedia_extractor
 
 
 def extract_data(data_source: str) -> dict:
@@ -45,116 +47,90 @@ def parse_data(data_source: str) -> dict:
     with open(source_config_path, encoding='UTF-8') as source_config_file:
         source_config=json.load(source_config_file)
 
-    # Start the transform summary with the data from the source configuration
-    transform_summary=source_config
+    # Start multiprocessing manager
+    manager=Manager()
 
-    # Prepare the hdf5 output
-    output_file=f"{config.DATA_PATH}/{source_config['target_index_name']}/{config.PARSED_TEXT}"
-    pathlib.Path(output_file).unlink(missing_ok=True)
-    output=h5py.File(output_file, 'w')
-    output_batch_group=output.require_group('batches')
+    # Set-up the parse summary as a shared variable via the multiprocessing
+    # manager so that both the reader and writer processes can add some summary
+    # statistics to it when they finish.
+    parse_summary=manager.dict(source_config)
 
-    # Open the input
+    # Set-up reader and writer queues to move workunit from the reader
+    # process to the workers and from the workers to the writer process.
+    reader_queue=manager.Queue(maxsize=100)
+    writer_queue=manager.Queue(maxsize=100)
+
+    # Set-up reader and writer processes: reader gets batches of text
+    # from the extracted text file and writer takes batches of parsed text
+    # from the parse workers and writes to file.
+
+    # Set parse worker count based on avalible CPUs. Subtract three: one
+    # for the reader and writer processes and one for the system.
+    n_workers=mp.cpu_count() - 3
+
+    # IO paths
     input_file_path=f"{config.DATA_PATH}/{source_config['target_index_name']}/{config.EXTRACTED_TEXT}"
-    input_data=h5py.File(input_file_path, 'r')
+    output_file_path=f"{config.DATA_PATH}/{source_config['target_index_name']}/{config.PARSED_TEXT}"
 
-    # Set number of workers to one less than the CPU count
-    n_workers=mp.cpu_count() - 1
+    reader_process=Process(
+        target=parse_funcs.reader,
+        args=(
+            input_file_path, 
+            reader_queue, 
+            n_workers,
+            parse_summary
+        )
+    )
 
-    # Counters and accumulators for batch loop
-    batch_count=0
-    chunk_count=0
-    record_count=0
-    batches=[]
+    writer_process=Process(
+        target=parse_funcs.writer,
+        args=(
+            output_file_path,
+            writer_queue,
+            n_workers,
+            parse_summary
+        )
+    )
 
-    # Start the timer
-    start_time = time.time()
+    # Start the parser pool
+    parser_pool=mp.Pool(processes=n_workers)
 
-    # Loop on the batches
-    for batch_num in input_data['batches']:
+    # Start each parse worker
+    for _ in range(n_workers):
+       parser_pool.apply_async(parse_funcs.parse_text, (reader_queue,writer_queue,))
 
-        # Grab the batch from the hdf5 connection
-        batch=input_data[f'batches/{batch_num}']
+    # Start the reader and writer processes to begin real work, timing how long it takes.
+    start_time=time.time()
 
-        # Strings come out of hdf5 as bytes, decode them
-        decoded_batch=[]
+    reader_process.start()
+    writer_process.start()
 
-        for text in batch:
-            record_count+=1
-            decoded_batch.append(text.decode('utf-8'))
+    # Wait for the parser pool workers to finish, then shut the pool down.
+    parser_pool.close()
+    parser_pool.join()
 
-        # Add the decoded batch to this round
-        batches.append(decoded_batch)
+    # Stop the timer
+    dT=time.time() - start_time
 
-        # There are three ways we to enter job submission:
-        #
-        # 1. We have a batch for every worker.
-        # 2. The number of batches left to submit in order to complete the number of
-        #    batches requested by the user is less than the number of workers.
-        # 3. We have reached the end of the input.
-        #
-        # Each of these three cases also has a different thing to do after. For number
-        # we submit the jobs and keep going. For number two, we break the line loop and stop.
-        # for number three, we have already left the line loop and can just end after
-        # the last batches.
+    # Clean up IO processes
+    reader_process.join()
+    reader_process.close()
 
-        # 1. If we have a batch for each worker, submit
-        if len(batches) == n_workers:
+    writer_process.join()
+    writer_process.close()
 
-            batch_count, chunk_count=parse_funcs.submit_batches(n_workers, batches, output_batch_group, batch_count, chunk_count)
+    # Write some stuff to the parse summary then recover it to a normal python dictionary
+    # from the multiprocessing shared memory DictProxy object
+    parse_summary['observed_parse_rate']=parse_summary['parse_input_texts']/dT
+    parse_time=config.WIKIPEDIA_RECORD_COUNT / parse_summary['observed_parse_rate']
+    parse_summary['estimated_total_parse_time']=parse_time
+    parse_summary=dict(parse_summary)
 
-            # Reset batches for next round
-            batches=[]
+    # Close the queues and stop the manager
+    manager.shutdown()
 
-        # 2. If the number of batches left to fulfill a user request for a specific number of
-        # batches is less than the number of workers, submit that number of batches
-        # once we have them.
-        if source_config['num_batches'] != 'all':
-
-            batches_remaining=source_config['num_batches'] - batch_count
-
-            if batches_remaining < n_workers and len(batches) == batches_remaining:
-
-                n_workers=batches_remaining
-                batch_count, chunk_count=parse_funcs.submit_batches(n_workers, batches, output_batch_group, batch_count, chunk_count)
-
-                # Break the line loop to end the run
-                break
-            
-            # Also break the line loop if we have completed the exact number of batches
-            # requested by the user
-            if batch_count == source_config['num_batches']:
-                break
-
-    # 3. If we are extracting all of the data, i.e. the user has not requested a specific
-    # number of batches to run, submit whatever is left over after the last extraction
-    # round after we have finished reading the input file
-    if source_config['num_batches'] == 'all':
-
-        # If we have batches that did not get processed because we ran out of input
-        # before collecting enough batches for a full extraction round, start a
-        # round with what we have
-        if len(batches) != 0:
-
-            n_workers=len(batches)
-            batch_count, chunk_count=parse_funcs.submit_batches(n_workers, batches, output_batch_group, batch_count, chunk_count)
-
-    dT=time.time() - start_time # pylint: disable = invalid-name
-
-    # Add some stuff the the summary
-    transform_summary['run_time_seconds']=dT
-    transform_summary['worker_processes']=n_workers
-    transform_summary['parsed_batches']=batch_count
-    transform_summary['parsed_records']=record_count
-    transform_summary['output_chunks']=chunk_count
-    transform_summary['observed_parse_rate']=(record_count/dT)
-    transform_summary['estimated_total_parse_time']=(config.WIKIPEDIA_RECORD_COUNT / transform_summary['observed_parse_rate'])
-
-    # Close the hdf5
-    input_data.close()
-    output.close()
-
-    return transform_summary
+    # Finished
+    return parse_summary
 
 
 def embed_data(data_source: str) -> dict:

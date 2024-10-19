@@ -24,20 +24,20 @@ def wikipedia_extractor(source_config: dict) -> dict:
 
     # Set-up the extraction summary as a shared variable via the multiprocessing
     # manager so that both the reader and writer processes can add some summary
-    # statistics to it when they finish
+    # statistics to it when they finish.
     extraction_summary=manager.dict(source_config)
 
     # Set-up reader and writer queues to move workunit from the reader
-    # process to the workers and from the workers to the writer process
+    # process to the workers and from the workers to the writer process.
     reader_queue=manager.Queue(maxsize=100)
     writer_queue=manager.Queue(maxsize=100)
 
     # Set-up reader and writer processes: reader gets batches of records
-    # from the input file and writer takes batches for extracted text
-    # from the workers and writes to file
+    # from the input file and writer takes batches of extracted text
+    # from the workers and writes to file.
 
     # Set extraction worker count based on avalible CPUs. Subtract three: one
-    # for the reader and writer processes and one for the system
+    # for the reader and writer processes and one for the system.
     n_workers=mp.cpu_count() - 3
 
     # IO paths
@@ -204,17 +204,18 @@ def writer(
             # Break the main loop once we have received done from each extraction worker.
             if done_count == n_workers:
                 break
+        
+        elif workunit != 'done':
+            
+            # Add the extracted texts from the workunit to the output batch.
+            output_batch.extend(workunit)
 
-        # Add the extracted texts from the workunit to the output batch.
-        output_batch.extend(workunit)
-        print(f'Writer process received workunit, current output batch size: {len(output_batch)}')
-
-        # If the output batch is full, write it to disk and reset for the next.
-        if len(output_batch) >= extractor_output_batch_size:
-            batch_group.create_dataset(str(output_batch_count), data=output_batch)
-            output_record_count+=len(output_batch)
-            output_batch_count+=1
-            output_batch=[]
+            # If the output batch is full, write it to disk and reset for the next.
+            if len(output_batch) >= extractor_output_batch_size:
+                batch_group.create_dataset(str(output_batch_count), data=output_batch)
+                output_record_count+=len(output_batch)
+                output_batch_count+=1
+                output_batch=[]
 
     # Once we break out of the main loop, write one last time to flush anything
     # remaining in the output batch to disk and close the output connection.
