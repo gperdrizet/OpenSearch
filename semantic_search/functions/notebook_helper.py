@@ -1,10 +1,21 @@
 '''Collection of functions for notebooks.'''
 
+# Standard imports
+import random
+import time
+import multiprocessing as mp
+
 # PyPI imports
+import h5py
+import torch
+from transformers import AutoTokenizer, AutoModel
 from opensearchpy import OpenSearch # pylint: disable = import-error
 
+# Internal imports
+import configuration as config
+
 ############################################################
-# OWikipedia data cleaning functions #######################
+# Wikipedia data cleaning functions ########################
 ############################################################
 
 def remove_extra_sections(source_string: str) -> str:
@@ -134,9 +145,79 @@ def remove_thumbnails(source_string: str) -> str:
 
     return source_string
 
+
 ############################################################
 # OpenSearch functions #####################################
 ############################################################
+
+# Index definitions
+TEXT_INDEX_BODY={
+    'settings': {
+        'index': {
+            'number_of_shards': 3
+        }
+    },
+    "mappings": {
+        "properties": {
+            "text": {
+                "type": "text"
+            }
+        }
+    }
+}
+
+KNN_INDEX_BODY={
+    "settings": {
+        "number_of_shards": 3,
+        "index.knn": "true",
+        "default_pipeline": "embedding-ingest-pipeline"
+    },
+    "mappings": {
+        "properties": {
+            "text_embedding": {
+                "type": "knn_vector",
+                "dimension": 768,
+                "method": {
+                    "engine": "lucene",
+                    "space_type": "l2",
+                    "name": "hnsw",
+                    "parameters": {}
+                }
+            },
+            "text": {
+                "type": "text"
+            }
+        }
+    }
+}
+
+PRE_EMBEDDED_KNN_INDEX={
+  "settings": {
+    "index": {
+      "number_of_shards": 3,
+      "knn": "true",
+      "knn.algo_param.ef_search": 100
+    }
+  },
+  "mappings": {
+    "properties": {
+      "text_embedding": {
+        "type": "knn_vector",
+        "dimension": 768,
+        "space_type": "l2",
+        "method": {
+          "name": "hnsw",
+          "engine": "lucene",
+          "parameters": {
+            "ef_construction": 128,
+            "m": 24
+          }
+        }
+      }
+    }
+  }
+}
+
 
 def start_client() -> OpenSearch:
 
@@ -159,6 +240,7 @@ def start_client() -> OpenSearch:
 
     return client
 
+
 def initialize_index(index_name: str, index_body: dict) -> None:
 
     '''Set-up OpenSearch index. Deletes index if it already exists
@@ -176,3 +258,165 @@ def initialize_index(index_name: str, index_body: dict) -> None:
 
     # Close client
     client.close()
+
+
+############################################################
+# GPU embedding functions ##################################
+############################################################
+
+def submit_batches(
+    worker_gpus: list,
+    batches: list
+):
+
+    '''Takes list of batches and list of worker GPUs, submits batches 
+    to worker pool for embedding.'''
+
+    # Holder for results from workers
+    worker_embedding_times=[]
+
+    # Start the pool
+    pool=mp.Pool(processes=len(worker_gpus))
+
+    # Submit each batch to a worker
+    for batch, gpu in zip(batches, worker_gpus):
+        worker_embedding_time=pool.apply_async(calculate_embeddings, (batch,gpu,))
+        worker_embedding_times.append(worker_embedding_time)
+
+    # Collect the results from the workers
+    worker_embedding_times=[worker_embedding_time.get() for worker_embedding_time in worker_embedding_times]
+
+    # Get the mean embedding time
+    mean_embedding_time=sum(worker_embedding_times) / len(worker_embedding_times)
+
+    return mean_embedding_time
+
+
+def calculate_embeddings(batch: list, gpu: str) -> float:
+    '''Takes batch of text and gpu identifier, embeds with embedding batch
+    size of one, returns total embedding time.'''
+
+    embedding_model='sentence-transformers/msmarco-distilbert-base-tas-b'
+
+    # Load the model and tokenizer
+    tokenizer=AutoTokenizer.from_pretrained(embedding_model)
+    model=AutoModel.from_pretrained(embedding_model, device_map=gpu)
+
+    # Holder for embedded texts
+    embedded_texts=[]
+
+    # Start the timer
+    start_time=time.time()
+
+    # Loop texts in batch
+    for text in batch:
+
+        # Tokenize the texts
+        encoded_input=tokenizer(
+            text.decode('utf-8'),
+            padding=True,
+            truncation=True,
+            return_tensors='pt'
+        ).to(gpu)
+
+        # Compute token embeddings
+        with torch.no_grad():
+            model_output=model(**encoded_input, return_dict=True)
+
+        # Perform pooling
+        embeddings=model_output.last_hidden_state[:,0]
+
+        # Collect the result
+        embedded_texts.extend(embeddings.tolist())
+
+    # Get embedding time
+    dT=time.time() - start_time
+
+    # Return the embedding time
+    return dT
+
+
+def reader(
+        records: list,
+        target_texts: int,
+        batch_size: int,
+        reader_queue: mp.Queue, # type: ignore,
+        n_workers
+) -> None:
+    
+    '''Yields randomly sampled batches of input text and puts them
+    into the reader queue until the target number of texts has been
+    reached, then sends stop signals.'''
+
+    text_count=0
+
+    while text_count < target_texts:
+
+        # Grab a random sample of texts
+        batch=random.sample(records, batch_size)
+
+        # Decode each record in the batch
+        texts=[record.decode('utf-8') for record in batch]
+
+        # Put the batch in the queue
+        reader_queue.put(texts)
+
+        # Update the number of texts submitted
+        text_count+=len(texts)
+
+    # Once we have put all of the text needed into the queue
+    # send a done signal for each worker and finish
+    for _ in range(n_workers):
+        reader_queue.put('Done')
+
+    return
+
+
+def calculate_embeddings_from_queue(
+        gpu: str,
+        reader_queue: mp.Queue
+) -> None:
+    
+    '''Takes text from queue and calculates embeddings until
+    Done string is received.'''
+
+    embedding_model='sentence-transformers/msmarco-distilbert-base-tas-b'
+
+    # Load the model and tokenizer
+    tokenizer=AutoTokenizer.from_pretrained(embedding_model)
+    model=AutoModel.from_pretrained(embedding_model, device_map=gpu)
+
+    # Holder for embedded texts
+    embedded_texts=[]
+
+    # Loop until we receive done from the reader
+    while True:
+
+        # Get a batch of text from the queue
+        batch=reader_queue.get()
+
+        if batch == 'Done':
+            return
+
+        else:
+
+            # Loop on the batch
+            for text in batch:
+
+                # Tokenize the text
+                encoded_input=tokenizer(
+                    text,
+                    padding=True,
+                    truncation=True,
+                    return_tensors='pt'
+                ).to(gpu)
+
+                # Compute token embeddings
+                with torch.no_grad():
+                    model_output=model(**encoded_input, return_dict=True)
+
+                # Perform pooling
+                embeddings=model_output.last_hidden_state[:,0]
+
+                # Collect the result
+                embedded_texts.extend(embeddings.tolist())

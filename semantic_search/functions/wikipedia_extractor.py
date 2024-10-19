@@ -22,7 +22,7 @@ def wikipedia_extractor(source_config: dict) -> dict:
     extraction_summary=source_config
 
     # Prepare the hdf5 output
-    output_file=f"{config.DATA_PATH}/{source_config['target_index_name']}/{config.BATCHED_TEXT}"
+    output_file=f"{config.DATA_PATH}/{source_config['target_index_name']}/{config.EXTRACTED_TEXT}"
     pathlib.Path(output_file).unlink(missing_ok=True)
     output=h5py.File(output_file, 'w')
     batch_group=output.require_group('batches')
@@ -31,12 +31,10 @@ def wikipedia_extractor(source_config: dict) -> dict:
     gzip_data_file_path=f"{config.RAW_DATA_PATH}/{source_config['raw_data_file']}"
     file=GzipFile(gzip_data_file_path)
 
-    # Set number of workers to one less than the CPU count and create the pool
+    # Set number of workers to one less than the CPU count
     n_workers=mp.cpu_count() - 1
-    pool=mp.Pool(processes=n_workers)
 
-    # Counters and accumulators for batch loop
-    line_count=0
+    # Counters and accumulators for batching loop
     batch_count=0
     record_count=0
     batch=[]
@@ -46,46 +44,76 @@ def wikipedia_extractor(source_config: dict) -> dict:
     start_time = time.time()
 
     # Loop on the lines from the input file stream and accumulate batches
-    for line in file:
+    for line_count, line in enumerate(file):
 
-        line_count+=1
-
-        # Only pull text from article records (every other record is a metadata header)
-        if line_count % 2 == 0:
+        # Add article records (every other line is a metadata header) to the batch
+        if line_count % 2 != 0:
             batch.append(line)
             record_count+=1
 
-        # Once the batch is full, add to this round's batches and reset
+        # Once the batch is full, add it to this round's batches and clear it
+        # to accumulate another batch
         if len(batch) == source_config['batch_size']:
             batches.append(batch)
             batch=[]
 
-        # Once we have a batch for every worker, start the round
+        # There are three ways we to enter job submission:
+        #
+        # 1. We have a batch for every worker.
+        # 2. The number of batches left to submit in order to complete the number of
+        #    batches requested by the user is less than the number of workers.
+        # 3. We have reached the end of the input.
+        #
+        # Each of these three cases also has a different thing to do after. For number
+        # we submit the jobs and keep going. For number two, we break the line loop and stop.
+        # for number three, we have already left the line loop and can just end after
+        # the last batches.
+
+        # 1. If we have a batch for each worker, submit
         if len(batches) == n_workers:
 
-            # Holder for results from workers
-            worker_results=[]
-
-            # Submit each batch to a worker
-            for batch in batches:
-                worker_result=pool.apply_async(extract_wikipedia_text, (batch,))
-                worker_results.append(worker_result)
-
-            # Collect the results from the workers
-            results=[worker_result.get() for worker_result in worker_results]
-
-            # Save each result as a batch in the hdf5 file
-            for result in results:
-                batch_group.create_dataset(str(batch_count), data=result)
-                batch_count+=1
-
-            # Stop if we have reached the user requested number of batches
-            if source_config['num_batches'] != 'all':
-                if source_config['num_batches'] <= batch_count:
-                    break
+            batch_count=submit_batches(n_workers, batches, batch_group, batch_count)
 
             # Empty the batches for the next round
             batches=[]
+
+        # 2. If the number of batches left to fulfill a user request for a specific number of
+        # batches is less than the number of workers, submit that number of batches
+        # once we have them
+        if source_config['num_batches'] != 'all':
+
+            batches_remaining=source_config['num_batches'] - batch_count
+
+            if batches_remaining < n_workers and len(batches) == batches_remaining:
+
+                n_workers=batches_remaining
+                batch_count=submit_batches(n_workers, batches, batch_group, batch_count)
+
+                # Break the line loop to end the run
+                break
+            
+            # Also break the line loop if we have completed the exact number of batches
+            # requested by the user
+            if batch_count == source_config['num_batches']:
+                break
+
+    # 3. If we are extracting all of the data, i.e. the user has not requested a specific
+    # number of batches to run, submit whatever is left over after the last extraction
+    # round after we have finished reading the input file
+    if source_config['num_batches'] == 'all':
+
+        # If there are records in the last batch, add it to the batch list for the last
+        # extraction round
+        if len(batch) != 0:
+            batches.append(batch)
+
+        # If we have batches that did not get processed because we ran out of input
+        # before collecting enough batches for a full extraction round, start a
+        # round with what we have
+        if len(batches) != 0:
+
+            n_workers=len(batches)
+            batch_count=submit_batches(n_workers, batches, batch_group, batch_count)
 
     # Stop the timer after the last round finishes
     dT=time.time() - start_time # pylint: disable = invalid-name
@@ -98,8 +126,10 @@ def wikipedia_extractor(source_config: dict) -> dict:
     extraction_summary['extracted_batches']=batch_count
     extraction_summary['extraction_batch_size']=source_config['batch_size']
     extraction_summary['extracted_records']=record_count
-    extraction_summary['observed_extraction_rate']=(record_count/dT)
-    extraction_summary['estimated_total_extraction_time']=(config.WIKIPEDIA_RECORD_COUNT / extraction_summary['observed_extraction_rate'])
+    extraction_summary['observed_extraction_rate']=record_count/dT
+
+    extraction_time=config.WIKIPEDIA_RECORD_COUNT / extraction_summary['observed_extraction_rate']
+    extraction_summary['estimated_total_extraction_time']=extraction_time
 
     # Add some metadata to the hdf5 file
     metadata={'data_source': 'wikipedia','num_batches': batch_count}
@@ -109,6 +139,38 @@ def wikipedia_extractor(source_config: dict) -> dict:
     output.close()
 
     return extraction_summary
+
+
+def submit_batches(
+    n_workers: int,
+    batches: list,
+    batch_group: h5py._hl.group.Group,
+    batch_count: int
+) -> int:
+
+    '''Takes batches list and current batch count, submits batches to worker pool for text
+    extraction. Returns updated batch count after receiving and saving worker results.'''
+
+    # Holder for results from workers
+    worker_results=[]
+
+    # Start the pool
+    pool=mp.Pool(processes=n_workers)
+
+    # Submit each batch to a worker
+    for batch in batches:
+        worker_result=pool.apply_async(extract_wikipedia_text, (batch,))
+        worker_results.append(worker_result)
+
+    # Collect the results from the workers
+    results=[worker_result.get() for worker_result in worker_results]
+
+    # Save each result as a batch in the hdf5 file
+    for result in results:
+        batch_group.create_dataset(str(batch_count), data=result)
+        batch_count+=1
+
+    return batch_count
 
 
 def extract_wikipedia_text(lines: list) -> list:

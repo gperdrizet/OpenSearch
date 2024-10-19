@@ -1,12 +1,53 @@
 '''Functions for data cleaning and chunking. Meant to be
 run by multiprocessing pool workers'''
 
+# Standard imports
+import multiprocessing as mp
+
 # PyPI imports
+import h5py
 from semantic_text_splitter import TextSplitter # pylint: disable = no-name-in-module
 from tokenizers import Tokenizer
 
 # Internal imports
 import semantic_search.configuration as config
+
+def submit_batches(
+    n_workers: int,
+    batches: list,
+    output_batch_group: h5py._hl.group.Group,
+    batch_count: int,
+    chunk_count: int,
+) -> int:
+
+    '''Takes batches list and current batch count, submits batches to worker pool for parsing.
+    Returns updated batch count after receiving and saving worker results.'''
+
+    # Holder for results from workers
+    worker_results=[]
+
+    # Start the pool
+    pool=mp.Pool(processes=n_workers)
+
+    # Holder for results from workers
+    worker_results=[]
+
+    # Submit each batch to a worker
+    for batch in batches:
+        worker_result=pool.apply_async(clean_and_chunk, (batch,))
+        worker_results.append(worker_result)
+
+    # Collect the results from the workers
+    results=[worker_result.get() for worker_result in worker_results]
+
+    # Save each result as a batch in the hdf5 file
+    for result in results:
+        output_batch_group.create_dataset(str(batch_count), data=result)
+        batch_count+=1
+        chunk_count+=len(result)
+
+    return batch_count, chunk_count
+
 
 def clean_and_chunk(texts: list) -> list:
     '''Cleans and chunks batch of text, returns list of chunks'''

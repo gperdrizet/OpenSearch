@@ -20,9 +20,10 @@ MAX_TOKENS=512
 
 # Embedding parameters
 EMBEDDING_MODEL='sentence-transformers/msmarco-distilbert-base-tas-b'
-WORKER_GPUS=['cuda:0'] * 4
+WORKER_GPUS=['cuda:0'] * 6
 EMBEDDING_BATCH_SIZE=8
 WORKER_BATCHES_PER_ROUND=100
+
 BULK_INSERT_BATCH_SIZE=128
 
 # Default data source to process, can be overridden with command line argument
@@ -42,6 +43,6 @@ EMBEDDING_SUMMARY='3.1-embedding_summary.json'
 LOAD_SUMMARY='4.1-load_summary.json'
 
 # Intermediate data files
-BATCHED_TEXT='1.2-extracted_text.h5'
+EXTRACTED_TEXT='1.2-extracted_text.h5'
 PARSED_TEXT='2.2-parsed_text.h5'
 EMBEDDED_TEXT='3.2-embedded_data.h5'
