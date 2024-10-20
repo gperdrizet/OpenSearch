@@ -3,7 +3,6 @@
     "target_index_name": "wikipedia-sample",
     "raw_data_file": "enwiki-20240930-cirrussearch-content.json",
     "extractor_function": "wikipedia_extractor",
-    "extractor_output_batch_size": 100,
-    "extractor_workunit_size": 10,
-    "extracted_records_target": 10000
+    "output_batch_size": 1000,
+    "target_records": 10000
 }

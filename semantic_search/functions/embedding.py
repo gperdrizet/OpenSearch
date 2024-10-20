@@ -4,59 +4,33 @@
 import multiprocessing as mp
 
 # PyPI imports
-import h5py
 import torch
 from transformers import AutoTokenizer, AutoModel
 
 # Internal imports
 import semantic_search.configuration as config
 
-def submit_batches(
-    n_workers: int,
-    batches: list,
-    output_batch_group: h5py._hl.group.Group,
-    batch_count: int
-) -> int:
 
-    '''Takes batches list and current batch count, submits batches to worker pool for embedding.
-    Returns updated batch count after receiving and saving worker results.'''
-
-    # Holder for results from workers
-    worker_results=[]
-
-    # Start the pool
-    pool=mp.Pool(processes=n_workers)
-
-    # Holder for results from workers
-    worker_results=[]
-
-    # Submit each batch to a worker
-    for batch, gpu in zip(batches, config.WORKER_GPUS):
-        worker_result=pool.apply_async(calculate_embeddings, (batch,gpu,))
-        worker_results.append(worker_result)
-
-    # Collect the results from the workers
-    results=[worker_result.get() for worker_result in worker_results]
-
-    # Save each result as a batch in the hdf5 file
-    for result in results:
-        output_batch_group.create_dataset(str(batch_count), data=result)
-        batch_count+=1
-
-    return batch_count
-
-def calculate_embeddings(batch: list, gpu: str) -> list:
-    '''Takes batch of text and gpu identifier, calculates and
-    returns text embeddings.'''
+def embed_text(reader_queue: mp.Queue, writer_queue: mp.Queue, gpu: str) -> None:
+    '''Takes batch of text from reader queue. Calculates embeddings
+    and sends batch to writer process.'''
 
     # Load the model and tokenizer
     tokenizer=AutoTokenizer.from_pretrained(config.EMBEDDING_MODEL)
     model=AutoModel.from_pretrained(config.EMBEDDING_MODEL, device_map=gpu)
 
-    result=[]
+    # Main loop
+    while True:
+        
+        # Get the next record from the reader queue.
+        record=reader_queue.get()
 
-    # Loop on aggregate batch by generating chunks of EMBEDDING_BATCH_SIZE
-    for text in yield_batches(batch):
+        # Break out of the main loop when the reader process tells us we are done.
+        if record == 'done':
+            break
+
+        # Strings come out of hdf5 as bytes
+        text=record.decode('utf-8')
 
         # Tokenize the texts
         encoded_input=tokenizer(
@@ -71,17 +45,20 @@ def calculate_embeddings(batch: list, gpu: str) -> list:
             model_output=model(**encoded_input, return_dict=True)
 
         # Perform pooling
-        embeddings=model_output.last_hidden_state[:,0]
+        embedding=model_output.last_hidden_state[:,0]
 
-        # Collect the result
-        result.extend(embeddings.tolist())
+        # Collect the result: the embeddings are returned as a list, even
+        # don't submit a list. We also need to convert them from numpy
+        # to a python list for downstream processing
+        embedding=embedding[0].tolist()
 
-    # Return the embeddings as list
-    return result
+        # Send the embedding to the writer process
+        writer_queue.put(embedding)
 
+    # When we break out of the main loop due to a 'done' signal from the 
+    # reader process, send the same done signal along to the writer
+    # process.
+    writer_queue.put('done')
 
-def yield_batches(batch: list):
-    '''Yields individual batches from master batch sent to GPU worker.'''
-
-    for i in range(0, len(batch), config.EMBEDDING_BATCH_SIZE):
-        yield batch[i:i + config.EMBEDDING_BATCH_SIZE]
+    # Finished
+    return

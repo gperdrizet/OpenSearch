@@ -92,7 +92,7 @@ class ParseData(luigi.Task):
 
 class EmbedData(luigi.Task):
     '''Uses HuggingFace transformers to pre-calculate embeddings for indexing
-    in the next step'''
+    in the next step.'''
 
     # Take the data source string as a parameter
     data_source=luigi.Parameter()
