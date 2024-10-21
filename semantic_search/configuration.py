@@ -8,9 +8,6 @@ PROJECT_ROOT_PATH=os.path.dirname(os.path.realpath(__file__))
 
 # Other project paths
 DATA_PATH=f'{PROJECT_ROOT_PATH}/data'
-RAW_DATA_PATH=f'{DATA_PATH}/raw_data'
-DATA_SOURCE_CONFIG_PATH=f'{PROJECT_ROOT_PATH}/data_source_configurations'
-
 NLTK_ASSET_DIR=f'{PROJECT_ROOT_PATH}/.venv/lib/nltk_data'
 TORCH_CACHE='/mnt/fast_scratch/'
 
@@ -21,8 +18,6 @@ MAX_TOKENS=512
 # Embedding parameters
 EMBEDDING_MODEL='sentence-transformers/msmarco-distilbert-base-tas-b'
 WORKER_GPUS=['cuda:0','cuda:1','cuda:2']
-# EMBEDDING_BATCH_SIZE=8
-# WORKER_BATCHES_PER_ROUND=100
 
 # OpenSearch indexing parameters
 BULK_INSERT_BATCH_SIZE=256
@@ -38,12 +33,12 @@ WIKIPEDIA_ESTIMATED_CHUNK_COUNT=20648877
 DEFAULT_FORCE_START='None'
 
 # Luigi task summary files
-EXTRACTION_SUMMARY='1.1-extraction_summary.json'
-PARSE_SUMMARY='2.1-parse_summary.json'
-EMBEDDING_SUMMARY='3.1-embedding_summary.json'
-LOAD_SUMMARY='4.1-load_summary.json'
+EXTRACTION_SUMMARY='3.1-extraction_summary.json'
+PARSE_SUMMARY='4.1-parse_summary.json'
+EMBEDDING_SUMMARY='5.1-embedding_summary.json'
+LOAD_SUMMARY='6.1-load_summary.json'
 
 # Intermediate data files
-EXTRACTED_TEXT='1.2-extracted_text.h5'
-PARSED_TEXT='2.2-parsed_text.h5'
-EMBEDDED_TEXT='3.2-embedded_data.h5'
+EXTRACTED_TEXT='3.2-extracted_text.h5'
+PARSED_TEXT='4.2-parsed_text.h5'
+EMBEDDED_TEXT='5.2-embedded_data.h5'

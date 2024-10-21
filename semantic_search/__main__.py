@@ -1,8 +1,5 @@
 '''Runs Luigi ETL pipeline for semantic search database creation in OpenSearch.'''
 
-# Standard library imports
-from pathlib import Path
-
 # PyPI imports
 import luigi
 
@@ -15,11 +12,6 @@ if __name__ == '__main__':
 
     # Parse command line arguments
     args=semantic_search.functions.helper.parse_arguments()
-
-    # Make output directory for intermediate files
-    data_path=semantic_search.configuration.DATA_PATH
-    output_data_path=f"{data_path}/{args.data_source}"
-    Path(output_data_path).mkdir(parents=True, exist_ok=True)
 
     # Require restart of pipeline from intermediate job, if asked
     semantic_search.functions.helper.force_from(args.data_source, args.force_from)

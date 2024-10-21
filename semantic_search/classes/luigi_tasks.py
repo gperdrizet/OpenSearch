@@ -10,7 +10,6 @@ import luigi
 # Internal imports
 import semantic_search.configuration
 from semantic_search.classes.pipeline_task import PipelineTask
-#import semantic_search.functions.extract_transform_load as etl_funcs
 
 class ExtractText(luigi.Task):
     '''Runs source specific data extraction function. Reads raw data,
@@ -24,7 +23,7 @@ class ExtractText(luigi.Task):
         '''Loads data source specific configuration dictionary.'''
 
         # Load the data source configuration
-        source_config_path=f'{semantic_search.configuration.DATA_SOURCE_CONFIG_PATH}/{self.data_source}.json'
+        source_config_path=f'{semantic_search.configuration.DATA_PATH}/{self.data_source}/2-data_source_configuration.json'
         with open(source_config_path, encoding='UTF-8') as source_config_file:
             source_config=json.load(source_config_file)
 
@@ -51,20 +50,15 @@ class ExtractText(luigi.Task):
         workers=list(range(mp.cpu_count() - 3))
 
         # IO paths
-        input_path=f'{semantic_search.configuration.RAW_DATA_PATH}'
         input_file=source_config['raw_data_file']
-        input_file_path=f'{input_path}/{input_file}'
-
-        output_path=f'{semantic_search.configuration.DATA_PATH}/{self.data_source}'
         output_file=semantic_search.configuration.EXTRACTED_TEXT
-        output_file_path=f'{output_path}/{output_file}'
 
         # Instantiate an instance of PipelineTask
         extraction_task=PipelineTask(
             worker_function,
             self.data_source,
-            input_file_path,
-            output_file_path,
+            input_file,
+            output_file,
             workers
         )
 
@@ -110,20 +104,15 @@ class ParseText(luigi.Task):
         workers=list(range(mp.cpu_count() - 3))
 
         # IO paths
-        data_path=f'{semantic_search.configuration.DATA_PATH}/{self.data_source}'
-
         input_file=semantic_search.configuration.EXTRACTED_TEXT
-        input_file_path=f'{data_path}/{input_file}'
-
         output_file=semantic_search.configuration.PARSED_TEXT
-        output_file_path=f'{data_path}/{output_file}'
 
         # Instantiate an instance of PipelineTask
         parsing_task=PipelineTask(
             worker_function,
             self.data_source,
-            input_file_path,
-            output_file_path,
+            input_file,
+            output_file,
             workers
         )
 
@@ -169,20 +158,15 @@ class EmbedText(luigi.Task):
         workers=semantic_search.configuration.WORKER_GPUS
 
         # IO paths
-        data_path=f'{semantic_search.configuration.DATA_PATH}/{self.data_source}'
-
         input_file=semantic_search.configuration.PARSED_TEXT
-        input_file_path=f'{data_path}/{input_file}'
-
         output_file=semantic_search.configuration.EMBEDDED_TEXT
-        output_file_path=f'{data_path}/{output_file}'
 
         # Instantiate an instance of PipelineTask
         embedding_task=PipelineTask(
             worker_function,
             self.data_source,
-            input_file_path,
-            output_file_path,
+            input_file,
+            output_file,
             workers
         )
 
@@ -227,17 +211,15 @@ class LoadText(luigi.Task):
 
         # IO paths, output file is None because we are sending records
         # to OpenSearch for indexing rather than writing to disk
-        data_path=f'{semantic_search.configuration.DATA_PATH}/{self.data_source}'
         input_file=semantic_search.configuration.EMBEDDED_TEXT
-        input_file_path=f'{data_path}/{input_file}'
-        output_file_path=None
+        output_file=None
 
         # Instantiate an instance of PipelineTask
         indexing_task=PipelineTask(
             worker_function,
             self.data_source,
-            input_file_path,
-            output_file_path,
+            input_file,
+            output_file,
             workers
         )
 

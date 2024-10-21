@@ -28,21 +28,21 @@ class PipelineTask():
             self, 
             worker_function_name: str,
             data_source: str,
-            input_file_path: str,
-            output_file_path: str,
+            input_file: str,
+            output_file: str,
             workers: list
     ):
 
         # Set class attributes for this task
         self.worker_function_name=worker_function_name
         self.workers=workers
-        self.input_file_path=input_file_path
-        self.output_file_path=output_file_path
+        self.input_file_path=f'{semantic_search.configuration.DATA_PATH}/{data_source}/{input_file}'
+        self.output_file_path=f'{semantic_search.configuration.DATA_PATH}/{data_source}/{output_file}'
         self.n_workers=len(workers)
         self.data_source=data_source
 
         # Load the data source configuration
-        source_config_path=f'{semantic_search.configuration.DATA_SOURCE_CONFIG_PATH}/{data_source}.json'
+        source_config_path=f'{semantic_search.configuration.DATA_PATH}/{data_source}/2-data_source_configuration.json'
 
         with open(source_config_path, encoding='UTF-8') as source_config_file:
             self.source_config=json.load(source_config_file)
