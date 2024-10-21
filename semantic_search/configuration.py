@@ -21,13 +21,14 @@ MAX_TOKENS=512
 # Embedding parameters
 EMBEDDING_MODEL='sentence-transformers/msmarco-distilbert-base-tas-b'
 WORKER_GPUS=['cuda:0','cuda:1','cuda:2']
-EMBEDDING_BATCH_SIZE=8
-WORKER_BATCHES_PER_ROUND=100
+# EMBEDDING_BATCH_SIZE=8
+# WORKER_BATCHES_PER_ROUND=100
 
+# OpenSearch indexing parameters
 BULK_INSERT_BATCH_SIZE=256
 
 # Default data source to process, can be overridden with command line argument
-DEFAULT_DATA_SOURCE='wikipedia-sample'
+DEFAULT_DATA_SOURCE='wikipedia'
 WIKIPEDIA_RECORD_COUNT=6889224
 WIKIPEDIA_ESTIMATED_CHUNK_COUNT=20648877
 

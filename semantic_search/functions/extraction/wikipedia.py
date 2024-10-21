@@ -1,113 +1,14 @@
 '''Collection of functions for Wikipedia data extractor.'''
 
 # Standard imports
-import time
 import json
-import pathlib
 import multiprocessing as mp
-from multiprocessing import Manager, Process
-from gzip import GzipFile
 
 # PyPI imports
-import h5py
 import mwparserfromhell
 
-# Internal imports
-import semantic_search.configuration as config
-import semantic_search.functions.io as io_funcs
 
-
-def wikipedia_extractor(source_config: dict) -> dict:
-    '''Runs text extraction and batching on CirrusSearch Wikipedia dump.'''
-
-    # Start multiprocessing manager
-    manager=Manager()
-
-    # Set-up the task summary as a shared variable via the multiprocessing
-    # manager so that both the reader and writer processes can add values
-    # to it when they finish.
-    summary=manager.dict(source_config)
-
-    # Set-up reader and writer queues to move records from the reader
-    # process to the workers and from the workers to the writer process.
-    reader_queue=manager.Queue(maxsize=10000)
-    writer_queue=manager.Queue(maxsize=10000)
-
-    # Set-up reader and writer processes: reader streams data from the
-    # input file and writer collects output from the workers into batches
-    # and writes them to disk in a h5py file.
-
-    # Set worker count based on avalible CPUs. Subtract three: one
-    # for the reader and writer processes and one for the system.
-    n_workers=mp.cpu_count() - 3
-
-    # IO paths
-    input_file_path=f"{config.RAW_DATA_PATH}/{source_config['raw_data_file']}"
-    output_file_path=f"{config.DATA_PATH}/{source_config['target_index_name']}/{config.EXTRACTED_TEXT}"
-
-    reader_process=Process(
-        target=reader,
-        args=(
-            input_file_path,
-            reader_queue, 
-            n_workers,
-            source_config['target_records'],
-            summary
-        )
-    )
-
-    writer_process=Process(
-        target=io_funcs.hdf5_writer,
-        args=(
-            output_file_path,
-            source_config['output_batch_size'],
-            writer_queue,
-            n_workers,
-            summary
-        )
-    )
-
-    # Start the pool
-    pool=mp.Pool(processes=n_workers)
-
-    # Start each pool worker
-    for _ in range(n_workers):
-        pool.apply_async(extract_text, (reader_queue,writer_queue,))
-
-    # Start the reader and writer processes to begin real work, timing how long it takes.
-    start_time=time.time()
-
-    reader_process.start()
-    writer_process.start()
-
-    # Wait for the pool workers to finish, then shut the pool down.
-    pool.close()
-    pool.join()
-
-    # Stop the timer
-    dT=time.time() - start_time
-
-    # Clean up IO processes
-    reader_process.join()
-    reader_process.close()
-
-    writer_process.join()
-    writer_process.close()
-
-    # Write some stuff to the summary then recover it to a normal python dictionary
-    # from the multiprocessing shared memory DictProxy object
-    summary['observed_rate']=summary['input_records']/dT
-    estimated_total_run_time=config.WIKIPEDIA_RECORD_COUNT / summary['observed_rate']
-    summary['estimated_total_run_time']=estimated_total_run_time
-    summary=dict(summary)
-
-    # Close the queues and stop the manager
-    manager.shutdown()
-
-    # Finished
-    return summary
-
-def reader(
+def wikipedia_reader(
         input_file_path: str,
         reader_queue: mp.Queue,
         n_workers: int,
@@ -147,16 +48,17 @@ def reader(
         reader_queue.put('done')
 
     # Add some information to the summary and exit
-    summary['input_lines_read']=line_num + 1
-    summary['input_records']=record_count
+    summary['Input records read']=record_count
 
     return
 
 
-def extract_text(reader_queue: mp.Queue, writer_queue: mp.Queue) -> None:
+def wikipedia_extractor(reader_queue: mp.Queue, writer_queue: mp.Queue, worker) -> None:
     '''Worker function to do text extraction and source specific cleaning on 
     Wikipedia CirrusSearch dump source. Takes records from reader queue
     and sends extracted text to writer process for output to disk.'''
+
+    print(f'Worker {worker} starting Wikipedia extraction.')
 
     # Loop until we receive 'done' from the reader.
     while True:

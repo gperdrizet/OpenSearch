@@ -5,7 +5,7 @@ import json
 
 # Internal imports
 import semantic_search.configuration as config
-from semantic_search.functions.extraction.wikipedia_extractor import wikipedia_extractor
+from functions.extraction.wikipedia import wikipedia_extractor
 
 
 def extract_text(data_source: str) -> dict:

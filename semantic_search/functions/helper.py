@@ -5,7 +5,7 @@ import argparse
 import pathlib
 
 # Internal imports
-import semantic_search.configuration as config
+import semantic_search.configuration
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -23,17 +23,18 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         '--data_source',
         required=False,
-        default=config.DEFAULT_DATA_SOURCE,
-        help='data source to process, must match basename of data source configuration file',
-        metavar='DATA_SOURCE'
+        default=semantic_search.configuration.DEFAULT_DATA_SOURCE,
+        help='data source to process, must match basename of data source configuration file (default: %(default)s)',
+        metavar='TASK_NAME'
     )
 
     # Argument to specify Luigi task to force start execution from
     parser.add_argument(
         '--force_from',
         required=False,
-        default=config.DEFAULT_FORCE_START,
-        help='force Luigi pipeline to start from a specific task',
+        default=semantic_search.configuration.DEFAULT_FORCE_START,
+        choices=['None','ExtractText','ParseText','EmbedText','LoadText'],
+        help='force Luigi pipeline to start from a specific task (default: %(default)s, choices: [%(choices)s])',
         metavar='DATA_SOURCE'
     )
 
@@ -46,20 +47,22 @@ def force_from(data_dir: str, task_name: str = None):
     '''Forces all to be re-run starting with given task by removing their output'''
 
     # Dictionary of string task names and their output files
+    data_path=f'{semantic_search.configuration.DATA_PATH}/{data_dir}'
+
     tasks = {
         'ExtractText': [
-            f'{config.DATA_PATH}/{data_dir}/{config.EXTRACTION_SUMMARY}',
-            f'{config.DATA_PATH}/{data_dir}/{config.EXTRACTED_TEXT}'
+            f'{data_path}/{semantic_search.configuration.EXTRACTION_SUMMARY}',
+            f'{data_path}/{semantic_search.configuration.EXTRACTED_TEXT}'
         ],
         'ParseText': [
-            f'{config.DATA_PATH}/{data_dir}/{config.PARSE_SUMMARY}',
-            f'{config.DATA_PATH}/{data_dir}/{config.PARSED_TEXT}'
+            f'{data_path}/{semantic_search.configuration.PARSE_SUMMARY}',
+            f'{data_path}/{semantic_search.configuration.PARSED_TEXT}'
         ],
         'EmbedText': [
-            f'{config.DATA_PATH}/{data_dir}/{config.EMBEDDING_SUMMARY}',
-            f'{config.DATA_PATH}/{data_dir}/{config.EMBEDDED_TEXT}'
+            f'{data_path}/{semantic_search.configuration.EMBEDDING_SUMMARY}',
+            f'{data_path}/{semantic_search.configuration.EMBEDDED_TEXT}'
         ],
-        'LoadText': [f'{config.DATA_PATH}/{data_dir}/{config.LOAD_SUMMARY}']
+        'LoadText': [f'{data_path}/{semantic_search.configuration.LOAD_SUMMARY}']
     }
 
     # Flag to determine if we remove each file or not
@@ -72,9 +75,9 @@ def force_from(data_dir: str, task_name: str = None):
         # so that we will remove the output files for this and all
         # subsequent tasks
         if task == task_name:
-            remove_output = True
+            remove_output=True
 
         # If the flag has been flipped remove the output file
         if remove_output is True:
             for output_file in output_files:
-                pathlib.Path(output_file).unlink(missing_ok = True)
+                pathlib.Path(output_file).unlink(missing_ok=True)

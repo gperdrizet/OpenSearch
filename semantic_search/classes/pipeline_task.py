@@ -8,8 +8,11 @@ import multiprocessing as mp
 from multiprocessing import Manager, Process
 
 # Internal imports
-import semantic_search.configuration as config
+import semantic_search.configuration
 import semantic_search.functions.io as io_funcs
+
+# Data source extractor imports
+from semantic_search.functions.extraction.wikipedia import wikipedia_extractor, wikipedia_reader
 
 # Worker function imports
 from semantic_search.functions.worker import parse_text
@@ -21,22 +24,25 @@ class PipelineTask():
     '''Abstraction for pipeline task using queue fed worker pool pattern.'''
 
 
-    def __init__(self, worker_function_name: str, data_source: str, input_file: str, output_file: str, workers: list):
+    def __init__(
+            self, 
+            worker_function_name: str,
+            data_source: str,
+            input_file_path: str,
+            output_file_path: str,
+            workers: list
+    ):
 
-        # Add the target worker function
+        # Set class attributes for this task
         self.worker_function_name=worker_function_name
-
-        # Add the worker list
         self.workers=workers
-
-        # Get the worker count
+        self.input_file_path=input_file_path
+        self.output_file_path=output_file_path
         self.n_workers=len(workers)
-
-        # Set the data source
         self.data_source=data_source
 
         # Load the data source configuration
-        source_config_path=f'{config.DATA_SOURCE_CONFIG_PATH}/{data_source}.json'
+        source_config_path=f'{semantic_search.configuration.DATA_SOURCE_CONFIG_PATH}/{data_source}.json'
 
         with open(source_config_path, encoding='UTF-8') as source_config_file:
             self.source_config=json.load(source_config_file)
@@ -44,11 +50,7 @@ class PipelineTask():
         # Add the source configuration key-value pairs as class attributes
         for key, value in self.source_config.items():
             setattr(self, key, value)
-
-        # IO paths
-        self.input_file_path=f"{config.DATA_PATH}/{self.target_index_name}/{input_file}"
-        self.output_file_path=f"{config.DATA_PATH}/{self.target_index_name}/{output_file}"
-
+        
         # Start multiprocessing manager
         self.manager=Manager()
 
@@ -104,7 +106,7 @@ class PipelineTask():
         # Write some stuff to the summary then recover it to a normal python dictionary
         # from the multiprocessing shared memory DictProxy object
         self.task_summary['Processing rate (records per second)']=self.task_summary['Input records read']/dT
-        run_time=config.WIKIPEDIA_RECORD_COUNT / self.task_summary['Processing rate (records per second)']
+        run_time=semantic_search.configuration.WIKIPEDIA_RECORD_COUNT / self.task_summary['Processing rate (records per second)']
         self.task_summary['Estimated total run time (seconds)']=run_time
         self.task_summary=dict(self.task_summary)
 
@@ -113,6 +115,23 @@ class PipelineTask():
 
         # Finished
         return self.task_summary
+
+    def initialize_raw_data_reader(self):
+        '''Set-up reader process to ingest data from source.'''
+
+        # Define the reader function
+        reader_function=globals()[self.reader_function]
+
+        self.reader_process=Process(
+            target=reader_function,
+            args=(
+                self.input_file_path,
+                self.reader_queue, 
+                self.n_workers,
+                self.target_records,
+                self.task_summary
+            )
+        )
 
     def initialize_hdf5_reader(self):
         '''Set-up reader process: reader gets records from the input
@@ -127,6 +146,7 @@ class PipelineTask():
                 self.task_summary
             )
         )
+
 
     def initialize_hdf5_writer(self):
         '''Set-up writer process: takes results from workers
@@ -143,6 +163,7 @@ class PipelineTask():
             )
         )
 
+
     def initialize_opensearch_indexer(self):
         '''Set-up OpenSearch indexing process. Collects formatted indexing
         requests from workers into batches, sends them to OpenSearch via
@@ -152,7 +173,7 @@ class PipelineTask():
             target=io_funcs.indexer,
             args=(
                 self.target_index_name,
-                config.BULK_INSERT_BATCH_SIZE,
+                semantic_search.configuration.BULK_INSERT_BATCH_SIZE,
                 self.writer_queue,
                 self.task_summary
             )

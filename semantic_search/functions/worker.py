@@ -11,7 +11,7 @@ from transformers import AutoTokenizer, AutoModel
 from semantic_text_splitter import TextSplitter
 
 # Internal imports
-import semantic_search.configuration as config
+import semantic_search.configuration
 
 #######################################################################
 # Semantic splitting and text clean-up functions ######################
@@ -24,9 +24,11 @@ def parse_text(reader_queue: mp.Queue, writer_queue: mp.Queue, worker) -> None:
 
     print(f'Worker {worker} starting text parsing.')
 
-    # Fire up the semantic chunk splitter
-    tokenizer=Tokenizer.from_pretrained(config.TOKENIZER_NAME)
-    splitter=TextSplitter.from_huggingface_tokenizer(tokenizer, config.MAX_TOKENS)
+    # Fire up the semantic text splitter
+    tokenizer_name=semantic_search.configuration.TOKENIZER_NAME
+    max_tokens=semantic_search.configuration.MAX_TOKENS
+    tokenizer=Tokenizer.from_pretrained(tokenizer_name)
+    splitter=TextSplitter.from_huggingface_tokenizer(tokenizer, max_tokens)
 
     # Main loop
     while True:
@@ -130,8 +132,9 @@ def embed_text(reader_queue: mp.Queue, writer_queue: mp.Queue, gpu: str) -> None
     print(f'Worker {gpu} starting text embedding.')
 
     # Load the model and tokenizer
-    tokenizer=AutoTokenizer.from_pretrained(config.EMBEDDING_MODEL)
-    model=AutoModel.from_pretrained(config.EMBEDDING_MODEL, device_map=gpu)
+    embedding_mode=semantic_search.configuration.EMBEDDING_MODEL
+    tokenizer=AutoTokenizer.from_pretrained(embedding_mode)
+    model=AutoModel.from_pretrained(embedding_mode, device_map=gpu)
 
     # Main loop
     while True:
@@ -182,12 +185,7 @@ def embed_text(reader_queue: mp.Queue, writer_queue: mp.Queue, gpu: str) -> None
 # OpenSearch indexing functions #######################################
 #######################################################################
 
-def make_requests(
-        reader_queue: mp.Queue,
-        writer_queue: mp.Queue,
-        worker
-) -> None:
-    
+def make_requests(reader_queue: mp.Queue,writer_queue: mp.Queue,worker) -> None:
     '''Takes embedded records from the reader process, formats them
     as OpenSearch indexing requests and sends them to the writer
     process for upload.'''

@@ -1,8 +1,9 @@
 {
     "data_source_description": "English Wikipedia CirrusSearch dump from 2024-09-30",
     "target_index_name": "wikipedia",
-    "raw_data_file": "enwiki-20240930-cirrussearch-content.json.gz",
+    "raw_data_file": "enwiki-20240930-cirrussearch-content.json",
+    "reader_function": "wikipedia_reader",
     "extractor_function": "wikipedia_extractor",
-    "batch_size": 10000,
-    "num_batches": "all"
+    "output_batch_size": 1000,
+    "target_records": 5000
 }
