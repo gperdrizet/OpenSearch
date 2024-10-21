@@ -14,7 +14,7 @@ import mwparserfromhell
 
 # Internal imports
 import semantic_search.configuration as config
-import semantic_search.functions.common_io as io_funcs
+import semantic_search.functions.io as io_funcs
 
 
 def wikipedia_extractor(source_config: dict) -> dict:

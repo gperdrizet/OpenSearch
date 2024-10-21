@@ -1,29 +1,65 @@
-'''Contains extra functions related to Luigi data pipeline.'''
+'''Contains extra functions related to starting/running Luigi data pipeline.'''
 
 # Standard imports
+import argparse
 import pathlib
 
 # Internal imports
 import semantic_search.configuration as config
+
+
+def parse_arguments() -> argparse.Namespace:
+    '''Instantiates the command line argument parser
+    Adds and parses arguments, returns parsed arguments.'''
+
+    # Set-up command line argument parser
+    parser=argparse.ArgumentParser(
+        prog='OpenSearch semantic search ETL pipeline',
+        description='Parses data, recovers text, chunks into batches and inserts embeddings into OpenSearch KNN index.',
+        formatter_class=lambda prog: argparse.HelpFormatter(prog,max_help_position=80)
+    )
+
+    # Argument to specify the data source to process
+    parser.add_argument(
+        '--data_source',
+        required=False,
+        default=config.DEFAULT_DATA_SOURCE,
+        help='data source to process, must match basename of data source configuration file',
+        metavar='DATA_SOURCE'
+    )
+
+    # Argument to specify Luigi task to force start execution from
+    parser.add_argument(
+        '--force_from',
+        required=False,
+        default=config.DEFAULT_FORCE_START,
+        help='force Luigi pipeline to start from a specific task',
+        metavar='DATA_SOURCE'
+    )
+
+    args=parser.parse_args()
+
+    return args
+
 
 def force_from(data_dir: str, task_name: str = None):
     '''Forces all to be re-run starting with given task by removing their output'''
 
     # Dictionary of string task names and their output files
     tasks = {
-        'ExtractData': [
+        'ExtractText': [
             f'{config.DATA_PATH}/{data_dir}/{config.EXTRACTION_SUMMARY}',
             f'{config.DATA_PATH}/{data_dir}/{config.EXTRACTED_TEXT}'
         ],
-        'ParseData': [
+        'ParseText': [
             f'{config.DATA_PATH}/{data_dir}/{config.PARSE_SUMMARY}',
             f'{config.DATA_PATH}/{data_dir}/{config.PARSED_TEXT}'
         ],
-        'EmbedData': [
+        'EmbedText': [
             f'{config.DATA_PATH}/{data_dir}/{config.EMBEDDING_SUMMARY}',
             f'{config.DATA_PATH}/{data_dir}/{config.EMBEDDED_TEXT}'
         ],
-        'LoadData': [f'{config.DATA_PATH}/{data_dir}/{config.LOAD_SUMMARY}']
+        'LoadText': [f'{config.DATA_PATH}/{data_dir}/{config.LOAD_SUMMARY}']
     }
 
     # Flag to determine if we remove each file or not
